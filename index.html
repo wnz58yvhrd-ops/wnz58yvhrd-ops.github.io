@@ -54,6 +54,7 @@ select{background:#0b0c0f;border:1px solid var(--line);border-radius:8px;padding
 
 /* ---------- Plateau ---------- */
 #studio{position:fixed;inset:0;background:#000;overflow:hidden;touch-action:manipulation}
+#frame{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);overflow:hidden;background:#000}
 #cam{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
 #cam.mirror{transform:scaleX(-1)}
 #gridOv{position:absolute;inset:0;pointer-events:none}
@@ -234,9 +235,11 @@ select{background:#0b0c0f;border:1px solid var(--line);border-radius:8px;padding
 
 <!-- ===== PLATEAU ===== -->
 <section id="studio" hidden>
-  <video id="cam" playsinline autoplay muted></video>
-  <div id="gridOv"></div>
-  <canvas id="subCanvas" aria-hidden="true"></canvas>
+  <div id="frame">
+    <video id="cam" playsinline autoplay muted></video>
+    <div id="gridOv"></div>
+    <canvas id="subCanvas" aria-hidden="true"></canvas>
+  </div>
   <div id="noCam" hidden></div>
   <div id="prompt"><div id="scroller"></div><div id="guide"></div></div>
   <div id="countdown" hidden></div>
@@ -389,7 +392,7 @@ let actx=null, analyser=null, abuf=null, recCanvas=null, rctx=null, canvasStream
 async function openCamera(){
   if (stream) stream.getTracks().forEach(t=>t.stop());
   const portrait = S.format==='portrait';
-  const video = { facingMode:S.facing, width:{ideal: portrait?1080:1920}, height:{ideal: portrait?1920:1080}, frameRate:{ideal:30}, aspectRatio:{ideal: portrait?9/16:16/9} };
+  const video = { facingMode:S.facing, width:{ideal:1920}, height:{ideal:1080}, frameRate:{ideal:30} };
   if (!navigator.mediaDevices?.getUserMedia) throw new Error('nosupport');
   stream = await Promise.race([
     navigator.mediaDevices.getUserMedia({ video, audio:{echoCancellation:true,noiseSuppression:true} }),
@@ -489,7 +492,7 @@ function startListening(){
   rec.onerror = e => {
     if (['not-allowed','service-not-allowed','audio-capture','network'].includes(e.error)){
       srDead=true;
-      setModeChip(e.error==='network' ? 'PAS DE CONNEXION · mode voix' : 'MICRO INDISPO · mode voix');
+      setModeChip(e.error==='network' ? 'PAS DE CONNEXION · mode voix' : 'MODE VOIX (micro occupé)');
     }
   };
   rec.onend = () => { if (listening && !srDead) setTimeout(()=>{ try{ rec.start(); }catch{} },200); };
@@ -509,8 +512,13 @@ function layoutPrompt(){
   $('guide').style.top = guideY+'px';
   scroller.style.paddingTop = guideY+'px';
   scroller.style.paddingBottom = prompt.clientHeight+'px';
-  measureLines(); setModeChip(); applyPos();
+  measureLines(); setModeChip(); applyPos(); layoutFrame();
   lastSubKey='';
+}
+function layoutFrame(){
+  const st=$('studio'), W=st.clientWidth, H=st.clientHeight, r = S.format==='portrait' ? 9/16 : 16/9;
+  let fw=W, fh=W/r; if (fh>H){ fh=H; fw=H*r; }
+  const f=$('frame'); f.style.width=fw+'px'; f.style.height=fh+'px';
 }
 function applyPos(){ scroller.style.transform = `translateY(${-pos}px)` + (S.mirrorText?' scaleX(-1)':''); }
 function maxPos(){ return lines.length ? lines[lines.length-1].top - guideY : 0; }
@@ -649,8 +657,10 @@ function chunkWords(w){ const c=chunks[W[w].chunk]; const a=[]; for (let i=c.sta
 
 // image enregistrée (caméra + sous-titres gravés)
 function drawFrame(){
-  const v=$('cam'), cw=recCanvas.width, ch=recCanvas.height;
-  rctx.drawImage(v,0,0,cw,ch);
+  const v=$('cam'), cw=recCanvas.width, ch=recCanvas.height, vw=v.videoWidth, vh=v.videoHeight;
+  if (!vw || !vh) return;
+  const sc=Math.max(cw/vw,ch/vh), dw=vw*sc, dh=vh*sc;
+  rctx.drawImage(v,(cw-dw)/2,(ch-dh)/2,dw,dh);
   if (!S.subs || sub.w<0) return;
   const {words,active}=chunkWords(sub.w);
   drawSubs(rctx,cw,ch,words,active,sub.since,performance.now());
@@ -778,11 +788,13 @@ async function countdown(){
   el.hidden=true;
 }
 function recordStream(){
-  if (!S.subs || !HTMLCanvasElement.prototype.captureStream) { recCanvas=null; return stream; }
+  if (!HTMLCanvasElement.prototype.captureStream) { recCanvas=null; return stream; }
   const v=$('cam'), set=stream.getVideoTracks()[0].getSettings();
+  const src=Math.max(v.videoWidth||set.width||1280, v.videoHeight||set.height||720);
+  const [L,Sh] = src>=1600 ? [1920,1080] : [1280,720];
   recCanvas=document.createElement('canvas');
-  recCanvas.width = v.videoWidth || set.width || 1080;
-  recCanvas.height = v.videoHeight || set.height || 1920;
+  recCanvas.width  = S.format==='portrait' ? Sh : L;
+  recCanvas.height = S.format==='portrait' ? L : Sh;
   rctx=recCanvas.getContext('2d');
   drawFrame();
   canvasStream=recCanvas.captureStream(30);
