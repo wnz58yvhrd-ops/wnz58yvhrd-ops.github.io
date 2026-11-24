@@ -416,8 +416,8 @@ function camError(e){
       l:["Ouvre le fichier avec Chrome, Edge ou Safari (clic droit › Ouvrir avec).","Ou mets-le en ligne et ouvre le lien https."]};
   }
   if (n==='NotAllowedError') return IOS
-    ? {t:"Accès caméra ou micro refusé", p:"Safari a enregistré un refus. Pour le rétablir :",
-       l:["Dans Safari, touche « aA » à gauche de l'adresse.","Réglages du site web › Appareil photo et Micro › Autoriser (ou Demander).","Recharge la page."]}
+    ? {t:"Accès caméra ou micro refusé", p:"Le plus simple : ouvre cette page dans Safari et touche « Autoriser ». Sinon, selon ton navigateur :",
+       l:["Safari : touche « aA » à gauche de l'adresse › Réglages du site web › Appareil photo et Micro › Autoriser.","Chrome, Vivaldi, Edge, Firefox… : app Réglages de l'iPhone › le nom du navigateur › active Appareil photo et Micro.","Puis touche « Réessayer »."]}
     : {t:"Accès caméra ou micro refusé", p:"Autorise la caméra et le micro pour cette page :",
        l:["Clique sur l'icône à gauche de l'adresse.","Passe Caméra et Micro sur « Autoriser ».","Recharge la page."]};
   if (n==='NotFoundError' || n==='OverconstrainedError') return {t:"Aucune caméra trouvée", p:"Essaie l'autre caméra dans les réglages, ou vérifie que ta webcam est branchée.", l:[]};
