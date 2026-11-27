@@ -540,7 +540,8 @@ const ED = {
   mini:   { hp: 650, sp: 55,  dmg: 18, r: 30, xp: 25, col: '#3a3a3a' },
   boss:   { hp: 5000,sp: 44,  dmg: 20, r: 34, xp: 0,  col: '#b0201a' }
 };
-const QUOTES = ['Facile.', 'Au suivant !', 'Pas de quartier.', "J'ai même pas chaud.", 'Qui veut du rab ?', 'Changement de programme.', "Ça, c'est fait.", 'Échauffement terminé.', 'Vous êtes combien, déjà ?'];
+const QUOTES = ['Facile.', 'Au suivant !', 'Pas de quartier.', "J'ai même pas chaud.", 'Qui veut du rab ?', 'Changement de programme.', "Ça, c'est fait.", 'Échauffement terminé.', 'Vous êtes combien, déjà ?', 'Crache ta fumée !', 'Aiguise-moi ça !', 'Je reviendrai pour toi, Bennett !'];
+const MINI_QUOTES = ["Je dévore deux bérets verts au p'tit déj !", 'Viens par là, John !', 'Tu vas finir sous mes roues !'];
 const BOSS_TIME = 480, MAX_EN = 300;
 
 /* =====================================================================
@@ -549,7 +550,7 @@ const BOSS_TIME = 480, MAX_EN = 300;
 let state = 'title', T = 0, kills = 0, shake = 0, pending = 0, endTimer = -1, won = false, chestPending = false;
 let wrecks = [];
 let P, W, PL, WT, enemies, bullets, ebullets, gems, pickups, explos, parts, texts, grenades, mines;
-let spawnAcc, nextMini, bossSpawned, boss, waveT, quote, banner;
+let spawnAcc, nextMini, bossSpawned, boss, waveT, quote, banner, equote = null, quoteT = 15;
 
 function newGame() {
   P = { x: 0, y: 0, r: 13, hp: 120, maxHp: 120, speed: 165, magnet: 70, regen: 0, dmg: 1, rate: 1, armor: 0,
@@ -557,7 +558,7 @@ function newGame() {
   W = { rifle: 1 }; PL = {}; WT = { rifle: 0.3, grenade: 1, rocket: 1.5, mines: 1 };
   wrecks = []; enemies = []; bullets = []; ebullets = []; gems = []; pickups = []; explos = []; parts = []; texts = []; grenades = []; mines = [];
   T = 0; kills = 0; shake = 0; pending = 0; endTimer = -1; won = false; chestPending = false;
-  spawnAcc = 0; nextMini = 180; bossSpawned = false; boss = null; waveT = 60; quote = null;
+  spawnAcc = 0; nextMini = 180; bossSpawned = false; boss = null; waveT = 60; quote = null; equote = null; quoteT = rand(10, 18);
   banner = { text: 'SURVIS !', t: 2.2 };
   MUS.bpm = 132; MUS.tr = 1; MUS.step = 0;
 }
@@ -904,6 +905,14 @@ function update(dt) {
   for (const t of texts) { t.y -= 40 * dt; t.t -= dt; }
   texts = texts.filter(t => t.t > 0);
   if (quote) { quote.t -= dt; if (quote.t <= 0) quote = null; }
+  if (equote) { equote.t -= dt; if (equote.t <= 0 || equote.ent.dead) equote = null; }
+  quoteT -= dt;
+  if (quoteT <= 0 && !won) {
+    quoteT = rand(12, 25);
+    const mini = enemies.find(e => e.type === 'mini' && !e.dead);
+    if (mini && Math.random() < 0.5) { equote = { text: pick(MINI_QUOTES), t: 3, ent: mini }; quote = null; }
+    else { quote = { text: pick(QUOTES), t: 2.6 }; equote = null; }
+  }
   if (banner) { banner.t -= dt; if (banner.t <= 0) banner = null; }
   shake = Math.max(0, shake - dt * 30);
 
@@ -950,7 +959,7 @@ function choose(o) {
   else if (o.kind === 'p') { PL[o.k] = (PL[o.k] || 0) + 1; PASSIVES[o.k].a(P); }
   else P.hp = Math.min(P.maxHp, P.hp + 50);
   pending--;
-  if (Math.random() < 0.35) quote = { text: pick(QUOTES), t: 2 };
+  if (Math.random() < 0.35) { quote = { text: pick(QUOTES), t: 2.4 }; equote = null; }
   if (pending > 0) openLevelUp(); else resume();
 }
 function resume() { state = 'play'; show(null); showHud(true); last = performance.now(); }
@@ -971,7 +980,7 @@ function finish(win) {
   const better = !b || (win && !b.win) || (win === !!b.win && (win ? kills > b.kills : T > b.t));
   if (better) store.set('oma_best', { t: T, kills, win, lvl: P.lvl });
   $('ovTitle').textContent = win ? 'MISSION ACCOMPLIE' : 'MISSION ÉCHOUÉE';
-  $('ovQuote').textContent = win ? "« Prochaine fois, envoyez quelqu'un de costaud. »" : pick(['« Je reviendrai… plus énervé. »', '« Simple contretemps. »', '« Ils ont eu de la chance. »']);
+  $('ovQuote').textContent = win ? "« Prochaine fois, envoyez quelqu'un de costaud. »" : pick(['« Je reviendrai… plus énervé. »', '« Simple contretemps. »', '« Ils ont eu de la chance. »', '« Je reviendrai pour toi, Bennett ! »']);
   $('ovStats').innerHTML = `<div><b>${fmt(T)}</b>survie</div><div><b>${kills}</b>abattus</div><div><b>${P.lvl}</b>niveau</div>`;
   $('bestOver').textContent = (better ? '⭐ Nouveau record ! ' : '') + bestText();
   show('sOver'); showHud(false);
@@ -1109,13 +1118,8 @@ function render() {
     if (t.t < 0.2 && Math.floor(t.t * 30) % 2) continue;
     pxText(String(t.s), toScreenX(t.x), toScreenY(t.y), t.big ? 12 : 9, t.col);
   }
-  if (quote) {
-    ctx.font = '10px "Press Start 2P", monospace';
-    const w = ctx.measureText(quote.text).width + 16, qx = toScreenX(P.x), qy = toScreenY(P.y) - 70;
-    ctx.fillStyle = '#000'; ctx.fillRect(qx - w / 2 - 2, qy - 16, w + 4, 26);
-    ctx.fillStyle = '#f4ecd6'; ctx.fillRect(qx - w / 2, qy - 14, w, 22); ctx.fillRect(qx - 4, qy + 8, 8, 4); ctx.fillRect(qx - 2, qy + 12, 4, 3);
-    ctx.fillStyle = '#1b1410'; ctx.textAlign = 'center'; ctx.fillText(quote.text, qx, qy + 2);
-  }
+  if (quote) bubble(quote.text, toScreenX(P.x), toScreenY(P.y) - 52, quote.t);
+  if (equote) { const e = equote.ent; bubble(equote.text, toScreenX(e.x), toScreenY(e.y) - (e.car ? 70 : 100), equote.t, true); }
   if (state === 'title') return;
 
   ctx.fillStyle = '#000'; ctx.fillRect(0, 0, VW, 10);
@@ -1155,6 +1159,27 @@ function render() {
     ctx.fillRect(0, 0, VW, 10); ctx.fillRect(0, VH - 10, VW, 10); ctx.fillRect(0, 0, 10, VH); ctx.fillRect(VW - 10, 0, 10, VH);
   }
 }
+// Bulle de BD : texte sur plusieurs lignes, contour noir, pointe vers celui qui parle
+function bubble(text, x, tipY, t, enemy) {
+  ctx.font = '10px "Press Start 2P", monospace'; ctx.textAlign = 'center';
+  const maxW = Math.min(230, VW - 40), words = text.split(' '), lines = [];
+  let cur = '';
+  for (const w of words) { const tst = cur ? cur + ' ' + w : w; if (ctx.measureText(tst).width > maxW && cur) { lines.push(cur); cur = w; } else cur = tst; }
+  lines.push(cur);
+  const lh = 15, w = Math.max(...lines.map(l => ctx.measureText(l).width)) + 20, h = lines.length * lh + 12;
+  const pop = Math.min(1, (3 - Math.min(3, t)) * 8 + 0.4);                 // petit effet d'apparition
+  const bx0 = clamp(x - w / 2, 8, VW - w - 8), by0 = tipY - 12 - h;
+  ctx.save(); ctx.translate(x, tipY); ctx.scale(pop, pop); ctx.translate(-x, -tipY);
+  ctx.fillStyle = '#000';
+  ctx.fillRect(bx0 - 3, by0 - 3, w + 6, h + 6);
+  ctx.beginPath(); ctx.moveTo(x - 9, by0 + h); ctx.lineTo(x + 3, tipY + 3); ctx.lineTo(x + 9, by0 + h); ctx.fill();
+  ctx.fillStyle = enemy ? '#ffe9e4' : '#fffaf0';
+  ctx.fillRect(bx0, by0, w, h);
+  ctx.beginPath(); ctx.moveTo(x - 6, by0 + h - 1); ctx.lineTo(x + 2, tipY - 2); ctx.lineTo(x + 6, by0 + h - 1); ctx.fill();
+  ctx.fillStyle = enemy ? '#a8160e' : '#1b1410';
+  lines.forEach((l, i) => ctx.fillText(l, bx0 + w / 2, by0 + 18 + i * lh));
+  ctx.restore();
+}
 function drawHero() {
   const img = SPR.hero[0].n;
   drawShadow(P.x, P.y + img.height * WU * 0.36, 14);
@@ -1179,7 +1204,7 @@ function loop(now) {
 requestAnimationFrame(loop);
 
 if (location.hash === '#debug') window.OMA = { get P() { return P; }, get W() { return W; }, get enemies() { return enemies; }, get MUS() { return MUS; },
-  setT: t => { T = t; nextMini = Math.max(nextMini, t); }, xp: v => addXp(v), give: (k, l) => { W[k] = l; } };
+  setT: t => { T = t; nextMini = Math.max(nextMini, t); }, xp: v => addXp(v), give: (k, l) => { W[k] = l; }, say: () => { quote = { text: "Je reviendrai pour toi, Bennett !", t: 2.6 }; const m = enemies.find(e => e.type === 'mini'); if (m) equote = { text: MINI_QUOTES[0], t: 3, ent: m }; } };
 })();
 </script>
 </body>
