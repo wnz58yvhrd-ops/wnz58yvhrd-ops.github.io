@@ -54,6 +54,10 @@ h2{font-family:var(--px);font-weight:400;font-size:clamp(20px,5vw,38px);margin:0
 .card.hero.sel{box-shadow:0 0 0 3px var(--gold),6px 6px 0 #000}
 @media (max-width:520px){.card.hero{padding:10px}.card.hero canvas{height:92px;margin:0}.card.hero .ds{font-size:18px}}
 #sIntro{background:#0a0704;cursor:pointer}
+#sTitle>:first-child{margin-top:auto}#sTitle>:last-child{margin-bottom:auto}
+#poster{image-rendering:pixelated;height:min(36vh,360px);width:auto;aspect-ratio:144/116;box-shadow:0 0 0 3px #000,8px 8px 0 rgba(0,0,0,.6);margin-bottom:-.5em;position:relative;z-index:0}
+#sTitle h1{position:relative;z-index:1}
+.slam #poster{animation:fadein .6s both}
 .press{font-family:var(--px);font-size:clamp(12px,3.4vw,18px);color:#fff;line-height:2;animation:blink 1s steps(1) infinite}
 .press small{display:block;font-size:.6em;color:#a39b82}
 @keyframes blink{50%{opacity:0}}
@@ -82,19 +86,20 @@ h1 .w{display:inline-block}
 </div>
 
 <div class="screen" id="sTitle">
+  <canvas id="poster" width="144" height="116"></canvas>
   <h1><span class="w w1">ONE</span> <span class="w w2">MAN</span><br><span class="w w3">ARMY</span></h1>
   <div class="after">
   <div class="tag">Un camp. Une armée.<br>Un seul homme.</div>
   <p class="story">Choisis ton commando : <b>John Commando</b>, le colosse, ou <b>John Vietnam</b>, le survivant. Ils ont fait l'erreur de venir vous chercher.
   Infiltre leur camp, tiens <b>8 minutes</b> face à leurs troupes, ramasse l'XP pour t'améliorer… et abats <b>le Général</b>.</p>
   <button class="btn" id="bStart">MISSION GO</button>
-  <p class="ctrl">Déplacement : <b>ZQSD</b> / <b>WASD</b> / <b>flèches</b> — ou glisse le doigt sur l'écran.<br>Tes armes tirent toutes seules. <b>P</b> ou <b>Échap</b> : pause.</p>
+  <p class="ctrl">Déplacement : <b>ZQSD</b> / <b>WASD</b> / <b>flèches</b> — ou glisse le doigt sur l'écran.<br>Tes armes tirent toutes seules. Fonce dans une <b>caisse</b> ou un <b>baril</b> pour sauter par-dessus. <b>P</b> ou <b>Échap</b> : pause.</p>
   <div class="best" id="bestTitle"></div>
   </div>
 </div>
 
 <div class="screen" id="sSelect">
-  <h2>CHOISIS TON HOMME</h2>
+  <h2>SÉLECTIONNE TON SOLDAT</h2>
   <div class="cards" id="heroes"></div>
 </div>
 
@@ -207,6 +212,8 @@ function sfx(n) {
     case 'hurt': osc(160, 0.25, 'square', 0.1, 0, 0, 50); break;
     case 'heal': osc(520, 0.2, 'p25', 0.07, 0, 0, 1300); break;
     case 'car': osc(70, 0.7, 'sawtooth', 0.12, 0, 0, 190); osc(140, 0.5, 'square', 0.04, 0, 0, 300); break;
+    case 'jump': nz(0.22, 0.09, 3000, 0, 0, true); osc(260, 0.18, 'triangle', 0.06, 0, 0, 700); break;
+    case 'land': osc(130, 0.12, 'sine', 0.22, 0, 0, 55); nz(0.1, 0.08, 800); break;
     case 'boss': osc(65, 1.4, 'sawtooth', 0.14, 0, 0, 38); nz(1.2, 0.14, 500); break;
     case 'win': [392, 523, 659, 784, 659, 1046].forEach((f, i) => osc(f, i === 5 ? 0.6 : 0.16, 'p25', 0.07, AC.currentTime + i * 0.13)); break;
     case 'lose': [440, 415, 392, 330].forEach((f, i) => osc(f, i === 3 ? 0.7 : 0.25, 'p25', 0.07, AC.currentTime + i * 0.24)); break;
@@ -575,7 +582,7 @@ const CHK = 128, chunks = new Map();
 const roadH = j => hash(77, j) % 3 === 0;
 const roadV = i => hash(i, 91) % 3 === 0;
 let SOL = null;
-const solid = (x, y, w, h) => { if (SOL) SOL.push([x | 0, y | 0, w, h]); };
+const solid = (x, y, w, h, low) => { if (SOL) SOL.push([x | 0, y | 0, w, h, low ? 1 : 0]); };
 function px(g, c, x, y, w, h) { g.fillStyle = c; g.fillRect(x | 0, y | 0, w || 1, h || 1); }
 function pick2(a, R) { return a[(R() * a.length) | 0]; }
 function propTent(g, x, y) {
@@ -590,7 +597,7 @@ function propTent(g, x, y) {
   px(g, '#c9b98a', L - 2, T - 2); px(g, '#c9b98a', L + 35, T - 2); px(g, '#c9b98a', L - 2, T + 25); px(g, '#c9b98a', L + 35, T + 25);
 }
 function crate(g, x, y) {
-  solid(x, y + 2, 12, 10);
+  solid(x, y + 2, 12, 10, 1);
   px(g, 'rgba(0,0,0,.25)', x + 2, y + 2, 12, 12);
   px(g, '#5a3a18', x, y, 12, 12); px(g, '#a0703a', x + 1, y + 1, 10, 10); px(g, '#c08a4c', x + 1, y + 1, 10, 1);
   px(g, '#7d5428', x + 1, y + 4, 10, 1); px(g, '#7d5428', x + 1, y + 8, 10, 1);
@@ -598,7 +605,7 @@ function crate(g, x, y) {
 }
 function propCrates(g, x, y, R) { const n = 1 + (R() * 3 | 0); crate(g, x - 6, y - 6); if (n > 1) crate(g, x + 7, y - 4); if (n > 2) crate(g, x, y + 7); }
 function barrel(g, x, y, c) {
-  solid(x, y + 3, 9, 8);
+  solid(x, y + 3, 9, 8, 1);
   px(g, 'rgba(0,0,0,.25)', x + 2, y + 2, 9, 11);
   px(g, '#1b1410', x, y, 9, 11); px(g, c[0], x + 1, y + 1, 7, 9); px(g, c[1], x + 1, y + 1, 7, 3);
   px(g, '#1b1410', x + 1, y + 5, 7, 1); px(g, '#1b1410', x + 1, y + 8, 7, 1); px(g, '#ddd', x + 2, y + 2, 1, 1);
@@ -612,11 +619,11 @@ function bag(g, x, y, v) {
   px(g, '#6d5f3c', x, y, w, h); px(g, '#bba875', x + 1, y + 1, w - 2, h - 2); px(g, '#d2c290', x + 1, y + 1, w - 2, 1);
 }
 function propSandbags(g, x, y, R) {
-  solid(x - 18, y - 1, 35, 7);
+  solid(x - 18, y - 1, 35, 7, 1);
   px(g, 'rgba(0,0,0,.2)', x - 18, y - 6, 38, 14);
   for (let i = 0; i < 5; i++) bag(g, x - 18 + i * 7, y + 2);
   for (let i = 0; i < 4; i++) bag(g, x - 15 + i * 7, y - 2);
-  if (R() < 0.6) { solid(x - 22, y - 8, 4, 15); solid(x + 18, y - 8, 4, 15); for (let i = 0; i < 3; i++) { bag(g, x - 22, y - 10 + i * 6, true); bag(g, x + 18, y - 10 + i * 6, true); } }
+  if (R() < 0.6) { solid(x - 22, y - 8, 4, 15, 1); solid(x + 18, y - 8, 4, 15, 1); for (let i = 0; i < 3; i++) { bag(g, x - 22, y - 10 + i * 6, true); bag(g, x + 18, y - 10 + i * 6, true); } }
   if (R() < 0.5) { px(g, '#2a2a2a', x - 1, y - 9, 2, 6); px(g, '#2a2a2a', x - 4, y - 4, 8, 2); }
 }
 function propJeep(g, x, y) {
@@ -701,8 +708,20 @@ function getChunk(i, j) {
   return c;
 }
 
+function feetHit(x, y, r) {
+  const rr = r * 0.7 / WU, X = x / WU, Y = (y + r * 1.2) / WU;
+  let res = 0;
+  const i0 = Math.floor((X - rr) / CHK), i1 = Math.floor((X + rr) / CHK), j0 = Math.floor((Y - rr) / CHK), j1 = Math.floor((Y + rr) / CHK);
+  for (let i = i0; i <= i1; i++) for (let j = j0; j <= j1; j++) for (const q of getChunk(i, j).sol) {
+    const rx = i * CHK + q[0], ry = j * CHK + q[1];
+    const nx = clamp(X, rx, rx + q[2]), ny = clamp(Y, ry, ry + q[3]);
+    if ((X - nx) ** 2 + (Y - ny) ** 2 < rr * rr) { if (!q[4]) return 2; res = 1; }
+  }
+  return res;
+}
 function collide(ent, r) {
   const rr = r * 0.7 / WU, off = r * 1.2;
+  let hit = null, tall = false;
   let X = ent.x / WU, Y = (ent.y + off) / WU;
   const i0 = Math.floor((X - rr) / CHK), i1 = Math.floor((X + rr) / CHK), j0 = Math.floor((Y - rr) / CHK), j1 = Math.floor((Y + rr) / CHK);
   for (let i = i0; i <= i1; i++) for (let j = j0; j <= j1; j++) {
@@ -712,14 +731,31 @@ function collide(ent, r) {
       const nx = X < rx ? rx : X > rx + rw ? rx + rw : X, ny = Y < ry ? ry : Y > ry + rh ? ry + rh : Y;
       const dx = X - nx, dy = Y - ny, d2 = dx * dx + dy * dy;
       if (d2 >= rr * rr) continue;
-      if (d2 > 1e-6) { const d = Math.sqrt(d2), push = rr - d; X += dx / d * push; Y += dy / d * push; }
+      let hx = 0, hy = 0;
+      if (d2 > 1e-6) { const d = Math.sqrt(d2), push = rr - d; hx = dx / d; hy = dy / d; X += hx * push; Y += hy * push; }
       else {
         const l = X - rx, rg = rx + rw - X, t = Y - ry, b = ry + rh - Y, m = Math.min(l, rg, t, b);
-        if (m === l) X = rx - rr; else if (m === rg) X = rx + rw + rr; else if (m === t) Y = ry - rr; else Y = ry + rh + rr;
+        if (m === l) { X = rx - rr; hx = -1; } else if (m === rg) { X = rx + rw + rr; hx = 1; } else if (m === t) { Y = ry - rr; hy = -1; } else { Y = ry + rh + rr; hy = 1; }
       }
+      if (!q[4]) tall = true;
+      hit = { nx: hx, ny: hy };
     }
   }
   ent.x = X * WU; ent.y = Y * WU - off;
+  if (hit) hit.low = !tall;
+  return hit;
+}
+// Saut par-dessus une caisse, un baril ou des sacs de sable
+function tryVault(dx, dy) {
+  for (let dist = 14; dist <= 130; dist += 4) {
+    const x = P.x + dx * dist, y = P.y + dy * dist, h = feetHit(x, y, P.r);
+    if (h === 2) return;
+    if (h === 0) {
+      P.vault = { sx: P.x, sy: P.y, tx: x, ty: y, t: 0, dur: 0.34 + dist / 420, kind: Math.random() < 0.5 ? 'salto' : 'vault', dir: dx > 0.1 ? 1 : dx < -0.1 ? -1 : (P.ax < 0 ? -1 : 1) };
+      P.push = 0; sfx('jump'); burst(P.x, P.y + 24, '#9c8256', 6, 80);
+      return;
+    }
+  }
 }
 
 /* =====================================================================
@@ -950,6 +986,7 @@ function explode(x, y, r, dmg) {
   shake = Math.max(shake, 5); sfx('boom');
 }
 function damagePlayer(d) {
+  if (P.vault) return;
   if (P.inv > 0 || state !== 'play') return;
   d = Math.max(1, Math.round(d - P.armor));
   P.hp -= d; P.inv = 0.8; shake = Math.max(shake, 6);
@@ -975,8 +1012,17 @@ function update(dt) {
   const ml = Math.hypot(mx, my);
   if (ml > 1) { mx /= ml; my /= ml; }
   P.moving = ml > 0.05;
-  if (P.moving) { P.x += mx * P.speed * dt; P.y += my * P.speed * dt; P.fx = mx / Math.max(ml, 1e-3); P.fy = my / Math.max(ml, 1e-3); P.walk += dt * 7 * Math.min(1, ml); }
-  collide(P, P.r);
+  if (P.vault) {
+    const v = P.vault; v.t += dt / v.dur;
+    const k = Math.min(1, v.t), e = k * k * (3 - 2 * k);
+    P.x = v.sx + (v.tx - v.sx) * e; P.y = v.sy + (v.ty - v.sy) * e;
+    if (v.t >= 1) { P.vault = null; sfx('land'); burst(P.x, P.y + 24, '#9c8256', 8, 100); }
+  } else {
+    if (P.moving) { P.x += mx * P.speed * dt; P.y += my * P.speed * dt; P.fx = mx / Math.max(ml, 1e-3); P.fy = my / Math.max(ml, 1e-3); P.walk += dt * 7 * Math.min(1, ml); }
+    const hit = collide(P, P.r);
+    if (hit && hit.low && ml > 0.3 && (mx * -hit.nx + my * -hit.ny) / ml > 0.5) { P.push = (P.push || 0) + dt; if (P.push > 0.08) tryVault(mx / ml, my / ml); }
+    else P.push = 0;
+  }
   P.inv -= dt; P.muzzle -= dt;
   if (P.regen && P.hp < P.maxHp) P.hp = Math.min(P.maxHp, P.hp + P.regen * dt);
 
@@ -1541,6 +1587,20 @@ function drawHeli(e) {
 }
 function drawHero() {
   const set = SPR[P.skin], img = set[0].n;
+  if (P.vault) {
+    const v = P.vault, k = Math.min(1, v.t), salto = v.kind === 'salto';
+    const lift = Math.round(Math.sin(Math.PI * k) * (salto ? 36 : 22) / WU);
+    drawShadow(P.x, P.y + img.height * WU * 0.3, lift > 8 ? 12 : 16);
+    const ang = salto ? v.dir * k * Math.PI * 2 : v.dir * Math.sin(Math.PI * k) * 1.25;
+    const im = set[1].n, flip = v.dir < 0;
+    bx.save();
+    bx.translate(tb(P.x), tbY(P.y) - Math.round(im.height * 0.12) - lift);
+    bx.rotate(ang);
+    if (flip) bx.scale(-1, 1);
+    bx.drawImage(im, -im.cx, -Math.round(im.height / 2));
+    bx.restore();
+    return;
+  }
   drawShadow(P.x, P.y + img.height * WU * 0.3, 16);
   if (P.inv > 0 && P.inv < 50 && Math.floor(P.inv * 16) % 2) return;
   const flip = P.ax < 0, fr = P.moving ? Math.floor(P.walk) & 1 : 0;
@@ -1551,6 +1611,152 @@ function drawHero() {
   }
 }
 
+/* =====================================================================
+   AFFICHE DE L'ÉCRAN TITRE — les deux John dos à dos, façon pellicule
+   ===================================================================== */
+const POSTER = (() => {
+  const SKN = { d: '#5e3018', m: '#b87046', l: '#f6c49a' };
+  function lg(g, x0, y0, x1, y1, stops) { const gr = g.createLinearGradient(x0, y0, x1, y1); stops.forEach((c, i) => gr.addColorStop(i / (stops.length - 1), c)); return gr; }
+  function poly(g, pts, fill) { g.fillStyle = fill; g.beginPath(); g.moveTo(pts[0][0], pts[0][1]); for (let i = 1; i < pts.length; i++) g.lineTo(pts[i][0], pts[i][1]); g.closePath(); g.fill(); }
+  function limb(g, a, b, w0, w1, fill) {   // membre conique de a vers b
+    const dx = b[0] - a[0], dy = b[1] - a[1], l = Math.hypot(dx, dy), nx = -dy / l, ny = dx / l;
+    poly(g, [[a[0] + nx * w0, a[1] + ny * w0], [b[0] + nx * w1, b[1] + ny * w1], [b[0] - nx * w1, b[1] - ny * w1], [a[0] - nx * w0, a[1] - ny * w0]], fill);
+    g.beginPath(); g.arc(a[0], a[1], w0, 0, 6.283); g.fill(); g.beginPath(); g.arc(b[0], b[1], w1, 0, 6.283); g.fill();
+  }
+  const ell = (g, x, y, rx, ry, f, rot) => { g.fillStyle = f; g.beginPath(); g.ellipse(x, y, rx, ry, rot || 0, 0, 6.283); g.fill(); };
+  const at = (A, B, t) => [A[0] + (B[0] - A[0]) * t, A[1] + (B[1] - A[1]) * t];
+  // Figure tournée vers la droite, dos à gauche, sur une toile 120 x 220
+  function figure(o) {
+    const c = document.createElement('canvas'); c.width = 120; c.height = 220;
+    const g = c.getContext('2d');
+    const skinG = (x0, x1) => lg(g, x0, 0, x1, 0, [SKN.d, SKN.m, SKN.l, SKN.m]);
+    const pantsG = (x0, x1) => lg(g, x0, 0, x1, 0, o.pants);
+    // jambes
+    limb(g, [50, 138], [42, 200], 10, 7, pantsG(32, 60));
+    limb(g, [68, 138], [76, 200], 11, 7.5, pantsG(58, 88));
+    g.fillStyle = 'rgba(0,0,0,.25)'; g.fillRect(56, 140, 3, 40);
+    // rangers
+    poly(g, [[33, 196], [51, 196], [53, 212], [30, 214], [30, 206]], '#1e1610');
+    poly(g, [[68, 196], [86, 196], [94, 210], [92, 214], [68, 214]], '#2a2018');
+    g.fillStyle = '#3e3024'; g.fillRect(70, 198, 14, 2); g.fillRect(35, 198, 14, 2);
+    // bras arrière (épaule + bras)
+    const RS = [42, 70], RE = [38, 104], RF = at([56, 150], [104, 14], 0.3);
+    limb(g, RS, RE, 11, 8, skinG(26, 52));
+    ell(g, 40, 68, 5, 4, 'rgba(255,220,180,.35)');
+    // torse : peau puis marcel
+    poly(g, [[36, 62], [88, 62], [84, 100], [78, 134], [46, 134], [40, 100]], skinG(34, 90));
+    poly(g, [[46, 60], [58, 66], [68, 66], [80, 60], [83, 100], [77, 134], [47, 134], [42, 100]], lg(g, 40, 0, 86, 0, o.top));
+    g.strokeStyle = 'rgba(0,0,0,.28)'; g.lineWidth = 1.5;
+    g.beginPath(); g.moveTo(50, 88); g.quadraticCurveTo(62, 96, 76, 86); g.stroke();                 // pectoraux
+    g.beginPath(); g.moveTo(62, 98); g.lineTo(62, 128); g.moveTo(54, 110); g.lineTo(70, 110); g.moveTo(54, 120); g.lineTo(70, 120); g.stroke();
+    if (o.bandolier) {                       // cartouchière en travers
+      const A = [44, 66], B = [80, 132];
+      g.strokeStyle = '#3a2a18'; g.lineWidth = 6; g.beginPath(); g.moveTo(A[0], A[1]); g.lineTo(B[0], B[1]); g.stroke();
+      for (let t = 0.05; t < 1; t += 0.08) { const p = at(A, B, t); ell(g, p[0] + 1, p[1] - 1, 2.2, 3.2, '#e0b040', 0.5); ell(g, p[0] + 1.5, p[1] - 2, 1, 1.2, '#fff0a0'); }
+    }
+    // ceinture
+    g.fillStyle = '#2a1e12'; g.fillRect(44, 130, 36, 8); g.fillStyle = '#c9a227'; g.fillRect(60, 131, 6, 6);
+    // cou + trapèzes
+    poly(g, [[52, 46], [70, 46], [74, 60], [84, 64], [40, 64], [50, 60]], skinG(40, 84));
+    g.strokeStyle = 'rgba(60,25,10,.45)'; g.lineWidth = 1.2; g.beginPath(); g.moveTo(54, 50); g.lineTo(58, 62); g.stroke();
+    // bras avant
+    const FS = [86, 70], FE = [96, 106], FH = at([56, 150], [104, 14], 0.6);
+    ell(g, 86, 72, 13, 15, skinG(72, 100));                 // deltoïde
+    limb(g, FS, FE, 12, 9, skinG(82, 108));                 // biceps
+    ell(g, 90, 66, 6, 4, 'rgba(255,225,190,.55)', -0.4);                     // reflet épaule
+    ell(g, 94, 86, 4, 8, 'rgba(255,220,180,.45)', -0.3);                      // reflet biceps
+    g.strokeStyle = 'rgba(60,25,10,.6)'; g.lineWidth = 1.6;
+    g.beginPath(); g.moveTo(76, 78); g.quadraticCurveTo(84, 88, 84, 100); g.stroke();   // séparation deltoïde/biceps
+    g.beginPath(); g.moveTo(88, 98); g.quadraticCurveTo(97, 102, 102, 98); g.stroke();  // pli du coude
+    limb(g, RE, RF, 8, 6, skinG(36, 70));                   // avant-bras arrière en travers du torse
+    // arme
+    const A = [56, 150], B = [104, 14], seg = (t0, t1, w, col) => limb(g, at(A, B, t0), at(A, B, t1), w, w, col);
+    if (o.gun === 'm60') { seg(0, 0.2, 6, '#3a2a1a'); seg(0.2, 0.62, 6, '#2a2a2e'); seg(0.62, 0.86, 3.5, '#3a3a40'); seg(0.86, 1, 2, '#2a2a2e');
+      const m = at(A, B, 0.45); limb(g, m, [m[0] + 12, m[1] + 8], 4, 4, '#3a3a24');
+      for (let i = 0; i < 6; i++) ell(g, m[0] + 14 + i * 2, m[1] + 12 + i * 4, 2, 3, '#e0b040'); }
+    else { seg(0, 0.2, 5, '#4a3020'); seg(0.2, 0.55, 5.5, '#26262a'); seg(0.55, 0.82, 4, '#33333a'); seg(0.82, 1, 1.8, '#26262a');
+      const m = at(A, B, 0.42); limb(g, m, [m[0] + 9, m[1] + 9], 3, 3, '#1c1c20'); }
+    g.strokeStyle = 'rgba(255,255,255,.25)'; g.lineWidth = 1; g.beginPath(); g.moveTo(...at(A, B, 0.2)); g.lineTo(...at(A, B, 0.95)); g.stroke();
+    limb(g, FE, FH, 9, 6.5, skinG(78, 104));                // avant-bras avant
+    ell(g, FH[0], FH[1], 6, 5, SKN.m); ell(g, FH[0] + 1, FH[1] - 1, 3, 2, SKN.l);
+    ell(g, RF[0], RF[1], 5.5, 5, SKN.m);
+    // tête de profil 3/4
+    ell(g, 61, 32, 13, 16, lg(g, 48, 0, 76, 0, [SKN.d, SKN.m, SKN.l]));
+    poly(g, [[56, 40], [74, 36], [76, 44], [70, 50], [58, 50]], lg(g, 56, 0, 76, 0, [SKN.m, SKN.l]));   // mâchoire
+    poly(g, [[73, 26], [79, 34], [74, 36]], SKN.l);                                                    // nez
+    ell(g, 54, 33, 3, 4.5, SKN.d);                                                                     // oreille
+    g.fillStyle = '#1a120c'; g.fillRect(67, 27, 4, 2);                                                 // œil
+    g.fillStyle = 'rgba(60,30,15,.7)'; g.fillRect(66, 24, 7, 2);                                       // sourcil
+    g.fillStyle = 'rgba(70,30,20,.8)'; g.fillRect(68, 44, 6, 1.5);                                     // bouche
+    if (o.head === 'crew') {
+      poly(g, [[47, 22], [52, 14], [72, 14], [75, 20], [75, 23], [49, 26]], lg(g, 47, 14, 75, 14, ['#1a120c', '#3a2a1c', '#5a4430']));
+      g.fillStyle = '#1a120c'; g.fillRect(48, 24, 4, 10);
+      g.fillStyle = 'rgba(30,60,20,.85)'; g.save(); g.translate(68, 36); g.rotate(-0.3); g.fillRect(-6, 0, 12, 2.5); g.fillRect(-8, 5, 10, 2); g.restore();
+      g.fillStyle = 'rgba(15,15,10,.8)'; g.fillRect(58, 20, 12, 2);
+    } else {
+      poly(g, [[46, 16], [56, 12], [72, 14], [76, 22], [62, 22], [52, 28], [50, 58], [40, 60], [42, 30]], lg(g, 40, 12, 76, 12, ['#0a0806', '#1e1814', '#3a302a']));
+      poly(g, [[48, 20], [76, 18], [77, 24], [48, 26]], '#c8241c'); g.fillStyle = '#ff5a48'; g.fillRect(60, 19, 12, 1.5);
+      poly(g, [[48, 21], [36, 30], [30, 26], [40, 22]], '#a81a14'); poly(g, [[48, 24], [34, 38], [30, 36], [42, 26]], '#c02420');
+    }
+    return c;
+  }
+  // pixelisation façon sprite numérisé : réduction, palette réduite, contour
+  function digitize(src, w, h) {
+    const c = document.createElement('canvas'); c.width = w; c.height = h;
+    const g = c.getContext('2d'); g.imageSmoothingEnabled = true; g.imageSmoothingQuality = 'high'; g.drawImage(src, 0, 0, w, h);
+    const id = g.getImageData(0, 0, w, h), d = id.data, q = v => Math.min(255, Math.round(v / 20) * 20);
+    const solid = new Uint8Array(w * h);
+    for (let i = 0; i < w * h; i++) { if (d[i * 4 + 3] > 110) { solid[i] = 1; d[i * 4] = q(d[i * 4]); d[i * 4 + 1] = q(d[i * 4 + 1]); d[i * 4 + 2] = q(d[i * 4 + 2]); d[i * 4 + 3] = 255; } else d[i * 4 + 3] = 0; }
+    for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) { const i = y * w + x; if (solid[i]) continue;
+      if ((x > 0 && solid[i - 1]) || (x < w - 1 && solid[i + 1]) || (y > 0 && solid[i - w]) || (y < h - 1 && solid[i + w])) { d[i * 4] = 20; d[i * 4 + 1] = 12; d[i * 4 + 2] = 8; d[i * 4 + 3] = 255; } }
+    g.putImageData(id, 0, 0); return c;
+  }
+  const FW = 128, FH2 = 116, PW = FW + 16;
+  let base = null;
+  function build() {
+    const b = document.createElement('canvas'); b.width = FW; b.height = FH2;
+    const g = b.getContext('2d');
+    g.fillStyle = lg(g, 0, 0, 0, FH2, ['#1a0806', '#5a1a0c', '#b8481a', '#f09a3a']); g.fillRect(0, 0, FW, FH2);
+    const glow = g.createRadialGradient(64, 44, 4, 64, 44, 66); glow.addColorStop(0, 'rgba(255,230,150,.95)'); glow.addColorStop(0.35, 'rgba(255,140,40,.6)'); glow.addColorStop(1, 'rgba(255,80,20,0)');
+    g.fillStyle = glow; g.fillRect(0, 0, FW, FH2);
+    // fumée
+    for (let i = 0; i < 14; i++) ell(g, 20 + Math.random() * 90, 20 + Math.random() * 40, 10 + Math.random() * 14, 6 + Math.random() * 8, 'rgba(40,16,10,.25)');
+    // silhouettes du camp
+    g.fillStyle = '#120806';
+    g.fillRect(0, 96, FW, 20);
+    g.fillRect(6, 70, 2, 26); g.fillRect(16, 70, 2, 26); poly(g, [[3, 70], [21, 70], [12, 62]], '#120806'); g.fillRect(5, 76, 14, 3);  // mirador
+    poly(g, [[96, 96], [108, 84], [120, 96]], '#120806');                                                                                // tente
+    g.fillRect(118, 60, 2, 36); for (let a = 0; a < 5; a++) { g.save(); g.translate(119, 60); g.rotate(-2.4 + a * 0.9); g.fillRect(0, -1, 12, 2); g.restore(); }  // palmier
+    const fV = digitize(figure({ head: 'long', bandolier: true, gun: 'm60', top: ['#1e2a16', '#3a4a2c', '#62744e', '#46563a'], pants: ['#1e2418', '#3a4430', '#5e684a', '#3a4430'] }), 60, 110);
+    const fC = digitize(figure({ head: 'crew', gun: 'rifle', top: ['#2a3818', '#4e6a2c', '#7a9a46', '#5a7232'], pants: ['#22261a', '#444b30', '#6e7650', '#444b30'] }), 60, 110);
+    g.drawImage(fV, 49, 6);
+    g.save(); g.translate(19 + 60, 6); g.scale(-1, 1); g.drawImage(fC, 0, 0); g.restore();
+    // vignette
+    const v = g.createRadialGradient(64, 58, 30, 64, 58, 90); v.addColorStop(0, 'rgba(0,0,0,0)'); v.addColorStop(1, 'rgba(0,0,0,.55)');
+    g.fillStyle = v; g.fillRect(0, 0, FW, FH2);
+    base = b;
+  }
+  let cv2 = null, ctx2 = null, lastF = 0;
+  function frame(now) {
+    if (!cv2) { cv2 = document.getElementById('poster'); if (!cv2) return; cv2.width = PW; cv2.height = FH2; ctx2 = cv2.getContext('2d'); }
+    if (now - lastF < 80) return; lastF = now;
+    if (!base) build();
+    const g = ctx2;
+    g.fillStyle = '#0c0a08'; g.fillRect(0, 0, PW, FH2);
+    const wy = Math.random() < 0.25 ? (Math.random() < 0.5 ? -1 : 1) : 0;            // tremblement de la pellicule
+    g.drawImage(base, 8, wy);
+    g.fillStyle = 'rgba(255,190,120,.07)'; g.fillRect(8, 0, FW, FH2);                  // teinte chaude
+    g.fillStyle = `rgba(0,0,0,${Math.random() * 0.1})`; g.fillRect(8, 0, FW, FH2);    // scintillement
+    for (let i = 0; i < 220; i++) { const l = Math.random() < 0.5; g.fillStyle = l ? 'rgba(255,240,220,.18)' : 'rgba(0,0,0,.22)'; g.fillRect(8 + Math.random() * FW | 0, Math.random() * FH2 | 0, 1, 1); }
+    if (Math.random() < 0.35) { g.fillStyle = 'rgba(255,245,230,.28)'; g.fillRect(8 + Math.random() * FW | 0, 0, 1, FH2); }
+    if (Math.random() < 0.3) { g.fillStyle = 'rgba(0,0,0,.6)'; const x = 8 + Math.random() * FW | 0, y = Math.random() * FH2 | 0; g.fillRect(x, y, 2, 1); g.fillRect(x + 1, y + 1, 1, 2); }
+    // perforations
+    const off = (now / 60 | 0) % 8;
+    for (let y = -8 + off; y < FH2; y += 8) { g.fillStyle = '#d8cfc0'; g.fillRect(2, y, 4, 4); g.fillRect(PW - 6, y, 4, 4); g.fillStyle = '#8a8274'; g.fillRect(2, y + 3, 4, 1); g.fillRect(PW - 6, y + 3, 4, 1); }
+  }
+  return { frame };
+})();
+
 /* ---------------- Boucle ---------------- */
 let last = performance.now();
 function loop(now) {
@@ -1558,6 +1764,7 @@ function loop(now) {
   if (state === 'play') update(dt);
   else if (state === 'title' || state === 'intro' || state === 'select') { T += dt; P.x += 20 * dt; P.moving = true; P.walk += dt * 5; P.ax = 1; }
   render();
+  if (state === 'title') POSTER.frame(now);
   requestAnimationFrame(loop);
 }
 requestAnimationFrame(loop);
