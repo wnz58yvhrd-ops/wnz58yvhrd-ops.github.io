@@ -477,7 +477,24 @@ const CAR_PAL = { k: '#120e0a', b: '#2f62c0', B: '#1d3f86', w: '#9cc0c4', W: '#e
 const WRECK_PAL = { k: '#0e0c0a', b: '#3a3632', B: '#24211e', w: '#1e1c1a', W: '#2e2a26', h: '#1e1c1a', c: '#555', R: '#3a1a14', y: '#3a3424', G: '#151515', g: '#333' };
 SPR.car = [CAR, CAR2].map(r => { const n = mkSprite(r, CAR_PAL, 2); return { n, w: whiten(n) }; });
 SPR.wreck = [{ n: mkSprite(CAR, WRECK_PAL, 2) }];
-const ANCH = { car: 38, hero: 8, grunt: 7, runner: 7, gunner: 7, brute: 12, mini: 24, boss: 24 };
+const HELI = [
+  "......................kpppppk...........",
+  "..kk..................kkkkkkkk..........",
+  ".kGGk...............kkGGGGGGGGkk........",
+  ".kGGk.............kkGGgggggggGGGkk......",
+  "..kGGkkkkkkkkkkkkkGGgggggrggggGGGwwwk...",
+  "..kGGGGGGGGGGGGGGGGggggrrrgggggGGwWWWk..",
+  "..kGGGGGGGGGGGGGGGGgggggrggggggGGwWWWk..",
+  "..kGGkkkkkkkkkkkkkGGggggggggggGGGwwwk...",
+  ".kGGk.............kkGGgggggggGGGkk......",
+  ".kGGk...............kkGGGGGGGGkk........",
+  "..kk..................kkkkkkkk..........",
+  "......................kpppppk..........."];
+const HELI_PAL = { k: '#120e0a', G: '#3f4f2a', g: '#5c7039', r: '#c8241c', w: '#6fa3b0', W: '#cfe8ee', p: '#2a2a2a' };
+const HWRECK_PAL = { k: '#0e0c0a', G: '#2c2a26', g: '#3a3632', r: '#3a1a14', w: '#1e1c1a', W: '#2e2a26', p: '#1a1a1a' };
+SPR.heli = [(() => { const n = mkSprite(HELI, HELI_PAL, 2); return { n, w: whiten(n) }; })()];
+SPR.hwreck = [{ n: mkSprite(HELI, HWRECK_PAL, 2) }];
+const ANCH = { hwreck: 40, wreck: 38, car: 38, hero: 8, grunt: 7, runner: 7, gunner: 7, brute: 12, mini: 24, boss: 24 };
 const ITEM = {
   machete: mkSprite([".kk..", "kWWk.", "kWWWk", "kWWWk", ".kWWk", ".kWWk", "..kWk", "..kWk", ".kkkk", ".knk.", ".knk.", ".kkk."], { k: '#1b1410', W: '#e3e9ec', n: '#6b4422' }),
   med: mkSprite(["kkkkkkkkk", "kwwwwwwwk", "kwwwrwwwk", "kwwrrrwwk", "kwwwrwwwk", "kwwwwwwwk", "kgggggggk", "kkkkkkkkk"], { k: '#1b1410', w: '#f4f4f4', r: '#d42a2a', g: '#b8b8b8' }),
@@ -652,7 +669,7 @@ const ED = {
   gunner: { hp: 28,  sp: 60,  dmg: 6,  r: 12, xp: 2,  col: '#6c7c8e' },
   brute:  { hp: 90,  sp: 46,  dmg: 12, r: 18, xp: 5,  col: '#6f7550' },
   mini:   { hp: 650, sp: 55,  dmg: 18, r: 30, xp: 25, col: '#3a3a3a' },
-  boss:   { hp: 5000,sp: 44,  dmg: 20, r: 34, xp: 0,  col: '#b0201a' }
+  boss:   { hp: 4200,sp: 44,  dmg: 20, r: 34, xp: 0,  col: '#b0201a' }
 };
 const QUOTES = ['Facile.', 'Au suivant !', 'Pas de quartier.', "J'ai même pas chaud.", 'Qui veut du rab ?', 'Changement de programme.', "Ça, c'est fait.", 'Échauffement terminé.', 'Vous êtes combien, déjà ?', 'Crache ta fumée !', 'Aiguise-moi ça !', 'Je reviendrai pour toi, Bennett !'];
 const MINI_QUOTES = ["Je dévore deux bérets verts au p'tit déj !", 'Viens par là, John !', 'Tu vas finir sous mes roues !'];
@@ -662,7 +679,7 @@ const BOSS_TIME = 480, MAX_EN = 300;
    ÉTAT
    ===================================================================== */
 let state = 'intro', T = 0, kills = 0, shake = 0, pending = 0, endTimer = -1, won = false, chestPending = false;
-let wrecks = [];
+let wrecks = [], strikes = [];
 let P, W, PL, WT, enemies, bullets, ebullets, gems, pickups, explos, parts, texts, grenades, mines;
 let spawnAcc, nextMini, bossSpawned, boss, waveT, quote, banner, equote = null, quoteT = 15;
 
@@ -670,7 +687,7 @@ function newGame() {
   P = { x: 0, y: 0, r: 13, hp: 120, maxHp: 120, speed: 165, magnet: 70, regen: 0, dmg: 1, rate: 1, armor: 0,
         xp: 0, lvl: 1, next: 5, inv: 0, fx: 1, fy: 0, ax: 1, ay: 0, walk: 0, moving: false, muzzle: 0, mA: 0 };
   W = { rifle: 1 }; PL = {}; WT = { rifle: 0.3, grenade: 1, rocket: 1.5, mines: 1 };
-  wrecks = []; enemies = []; bullets = []; ebullets = []; gems = []; pickups = []; explos = []; parts = []; texts = []; grenades = []; mines = [];
+  wrecks = []; strikes = []; enemies = []; bullets = []; ebullets = []; gems = []; pickups = []; explos = []; parts = []; texts = []; grenades = []; mines = [];
   T = 0; kills = 0; shake = 0; pending = 0; endTimer = -1; won = false; chestPending = false;
   spawnAcc = 0; nextMini = 180; bossSpawned = false; boss = null; waveT = 60; quote = null; equote = null; quoteT = rand(10, 18);
   banner = { text: 'SURVIS !', t: 2.2 };
@@ -733,6 +750,7 @@ function spawnEnemy(type, x, y) {
   const e = { type, x, y, r: d.r, hp, maxHp: hp, sp: d.sp * rand(0.92, 1.08), dmg: d.dmg, xp: d.xp, col: d.col,
               kx: 0, ky: 0, flash: 0, mHit: 0, st: rand(1.5, 3), mode: 'walk', mt: 3, dx: 0, dy: 0, sum: 5, boss: type === 'boss' || type === 'mini', wob: Math.random() * 6 };
   if (type === 'mini') { e.car = true; e.r = 36; e.fl = false; }
+  if (type === 'boss') { e.heli = true; e.r = 40; e.oa = Math.atan2(y - P.y, x - P.x); e.gun = 2.5; e.burst = 0; e.rk = 4; e.crash = 0; e.spin = 0; e.rot = 0; }
   enemies.push(e); return e;
 }
 function pickType() {
@@ -745,7 +763,7 @@ function pickType() {
 function spawnTick(dt) {
   if (T >= BOSS_TIME && !bossSpawned) {
     bossSpawned = true; boss = spawnEnemy('boss');
-    banner = { text: 'LE GÉNÉRAL ARRIVE', t: 3 }; quote = { text: 'Toi et moi. Maintenant.', t: 2.5 }; sfx('boss'); shake = 14;
+    banner = { text: 'LE GÉNÉRAL ARRIVE', t: 3 }; quote = null; equote = { text: 'Tu ne quitteras pas ce camp vivant, John !', t: 3.5, ent: boss }; sfx('boss'); shake = 14;
     MUS.bpm = 168; MUS.tr = Math.pow(2, 2 / 12); MUS.boss = true; MUS.step = 128;
   }
   if (T >= nextMini && T < BOSS_TIME - 20) { nextMini += 150; spawnEnemy('mini'); banner = { text: 'MASTODONTE !', t: 2 }; sfx('boss'); }
@@ -769,15 +787,32 @@ function burst(x, y, col, n, sp) {
   }
 }
 function hurt(e, base, kx, ky) {
-  if (e.dead) return;
+  if (e.dead || e.crash > 0) return;
   const crit = Math.random() < 0.08;
   const d = Math.round(base * P.dmg * rand(0.9, 1.1) * (crit ? 2 : 1));
   e.hp -= d; e.flash = 0.08;
   if (kx && !e.boss) { e.kx += kx; e.ky += ky; }
   addText(e.x + rand(-6, 6), e.y - e.r - 8, d, crit ? '#ffd23a' : '#fff', crit);
   sfx('hit');
-  if (e.hp <= 0) killEnemy(e);
+  if (e.heli && e.hp <= e.maxHp * 0.5) { e.hp = Math.max(e.hp, e.maxHp * 0.4); startCrash(e); }
+  else if (e.hp <= 0) killEnemy(e);
   else if (e.car && e.hp <= e.maxHp * 0.5) exitCar(e);
+}
+function startCrash(e) {
+  e.crash = 1.5; e.cvx = rand(-70, 70); e.flash = 0;
+  explos.push({ x: e.x, y: e.y, r: 60, t: 0 }); burst(e.x, e.y, '#ffb347', 14, 220);
+  shake = Math.max(shake, 10); sfx('boom');
+  banner = { text: 'IL EST TOUCHÉ !', t: 1.6 }; equote = null; quote = { text: 'Atterrissage forcé.', t: 2.2 };
+}
+function heliLand(e) {
+  e.heli = false; e.crash = 0; e.r = 34; e.st = 2; e.sum = 4;
+  wrecks.push({ x: e.x, y: e.y, fl: e.fl, t: 90, s: 'hwreck' });
+  if (wrecks.length > 4) wrecks.shift();
+  for (let i = 0; i < 5; i++) setTimeout(() => { explos.push({ x: e.x + rand(-70, 70), y: e.y + rand(-40, 40), r: rand(60, 100), t: 0 }); sfx('boom'); }, i * 140);
+  explode(e.x, e.y, 110, 60); burst(e.x, e.y, '#3f4f2a', 24, 260);
+  shake = 20; e.y += 50;
+  banner = { text: 'CRASH !', t: 1.8 }; quote = null;
+  setTimeout(() => { if (!e.dead) equote = { text: 'Toi et moi, John. Maintenant.', t: 3, ent: e }; }, 900);
 }
 function exitCar(e) {
   e.car = false; e.r = 30; e.mode = 'walk'; e.mt = 2; e.kx = e.ky = 0;
@@ -849,6 +884,7 @@ function update(dt) {
   buildGrid();
   if (!won) spawnTick(dt);
 
+  const heliT = enemies.find(e => e.heli && !e.crash && Math.hypot(e.x - P.x, e.y - P.y) < 560);
   const tgt = nearest(P.x, P.y, 540);
   if (tgt) { const dx = tgt.x - P.x, dy = tgt.y - P.y, d = Math.hypot(dx, dy) || 1; P.ax = dx / d; P.ay = dy / d; }
   else { P.ax = P.fx; P.ay = P.fy; }
@@ -856,8 +892,9 @@ function update(dt) {
   if (W.rifle) {
     const s = WEAPONS.rifle.s(W.rifle);
     WT.rifle -= dt;
-    if (WT.rifle <= 0 && tgt) {
-      const base = Math.atan2(P.ay, P.ax);
+    if (WT.rifle <= 0 && (tgt || heliT)) {
+      P.alt = !P.alt;
+      const ft = heliT && (P.alt || !tgt) ? heliT : tgt, base = Math.atan2(ft.y - P.y, ft.x - P.x);
       for (let i = 0; i < s.n; i++) {
         const a = base + (i - (s.n - 1) / 2) * 0.13 + rand(-0.03, 0.03);
         bullets.push({ x: P.x + Math.cos(a) * 20, y: P.y - 2 + Math.sin(a) * 20, vx: Math.cos(a) * 560, vy: Math.sin(a) * 560, dmg: s.dmg, pierce: s.pierce, life: 1, hit: new Set(), rk: false });
@@ -892,7 +929,7 @@ function update(dt) {
   if (W.rocket) {
     const s = WEAPONS.rocket.s(W.rocket);
     WT.rocket -= dt;
-    const rt = nearest(P.x, P.y, 600);
+    const rt = heliT || nearest(P.x, P.y, 600);
     if (WT.rocket <= 0 && rt) {
       const base = Math.atan2(rt.y - P.y, rt.x - P.x);
       for (let i = 0; i < s.n; i++) {
@@ -957,8 +994,40 @@ function update(dt) {
       if (e.mode === 'walk' && e.mt <= 0) { e.mode = 'tele'; e.mt = e.car ? 0.6 : 0.8; e.dx = dx / d; e.dy = dy / d; if (e.car) sfx('car'); }
       else if (e.mode === 'tele') { vx = vy = 0; if (e.mt <= 0) { e.mode = 'dash'; e.mt = 0.6; } }
       else if (e.mode === 'dash') { vx = e.dx * e.sp * dsh; vy = e.dy * e.sp * dsh; if (Math.random() < (e.car ? 0.9 : 0.5)) burst(e.x - e.dx * 60, e.y + 26, '#8c7b55', 1, 40); if (e.mt <= 0) { e.mode = 'walk'; e.mt = rand(3.5, 5); } }
+    } else if (e.type === 'boss' && e.heli) {
+      if (e.crash > 0) {
+        e.crash -= dt; e.spin += dt * (6 + (1.5 - e.crash) * 8);
+        vx = e.cvx; vy = 40;
+        parts.push({ x: e.x + rand(-10, 10), y: e.y + rand(-10, 10), vx: rand(-30, 30), vy: rand(-60, -20), t: 0.7, t0: 0.7, col: Math.random() < 0.3 ? '#ff9a2a' : '#4a4a4a', s: 2 });
+        if (e.crash <= 0) heliLand(e);
+      } else {
+        e.oa += dt * 0.5;
+        const tx = P.x + Math.cos(e.oa) * 250, ty = P.y + Math.sin(e.oa) * 180 - 30;
+        const ddx = tx - e.x, ddy = ty - e.y, dl = Math.hypot(ddx, ddy) || 1, sp = Math.min(180, dl * 1.4);
+        vx = ddx / dl * sp; vy = ddy / dl * sp;
+        // mitrailleuse : rafales
+        e.gun -= dt;
+        if (e.gun <= 0) {
+          if (e.burst > 0) {
+            e.burst--; e.gun = 0.11;
+            const nx = e.x + (P.x < e.x ? -38 : 38), ny = e.y + 4, a = Math.atan2(P.y - ny, P.x - nx) + rand(-0.09, 0.09);
+            ebullets.push({ x: nx, y: ny, vx: Math.cos(a) * 270, vy: Math.sin(a) * 270, r: 4, dmg: 7, life: 3 }); sfx('eshot');
+          } else { e.burst = 9; e.gun = 2.4; }
+        }
+        // frappes de roquettes avec cible au sol
+        e.rk -= dt;
+        if (e.rk <= 0) {
+          e.rk = rand(4.5, 6);
+          for (let i = 0; i < 3; i++) strikes.push({ x: P.x + (i ? rand(-90, 90) : 0), y: P.y + (i ? rand(-90, 90) : 0), t: 1.3 + i * 0.15, sx: e.x, sy: e.y });
+        }
+        // bruit du rotor
+        e.rot -= dt;
+        if (e.rot <= 0) { e.rot = 0.12; if (AC && !muted) nz(0.07, 0.07 * clamp(1 - d / 800, 0.25, 1), 420); }
+      }
+      e.sum -= dt;
+      if (e.sum <= 0 && !e.crash) { e.sum = 9; for (let i = 0; i < 5; i++) { const a = Math.random() * 6.283; spawnEnemy(i % 2 ? 'runner' : 'grunt', P.x + Math.cos(a) * viewR(), P.y + Math.sin(a) * viewR()); } }
     } else if (e.type === 'boss') {
-      const enraged = e.hp < e.maxHp / 2;
+      const enraged = e.hp < e.maxHp * 0.2;
       if (enraged) { vx *= 1.3; vy *= 1.3; }
       e.st -= dt;
       if (e.st <= 0) {
@@ -973,6 +1042,7 @@ function update(dt) {
     e.x += (vx + e.kx) * dt; e.y += (vy + e.ky) * dt; e.kx *= kd; e.ky *= kd;
     e.mv = Math.abs(vx) + Math.abs(vy) > 1;
     if (Math.abs(vx) > 5) e.fl = vx < 0;
+    if (e.heli) { e.fl = P.x < e.x; continue; }
     query(e.x, e.y, e.r + 20, o => {
       if (o === e) return;
       const sx = e.x - o.x, sy = e.y - o.y, min = e.r + o.r, dd = sx * sx + sy * sy;
@@ -1013,6 +1083,14 @@ function update(dt) {
 
   for (const p of parts) { p.x += p.vx * dt; p.y += p.vy * dt; p.vx *= 0.92; p.vy *= 0.92; p.t -= dt; }
   parts = parts.filter(p => p.t > 0);
+  for (const st of strikes) {
+    st.t -= dt;
+    if (st.t <= 0) {
+      st.done = true; explode(st.x, st.y, 58, 35);
+      if (Math.hypot(P.x - st.x, P.y - st.y) < 58 + P.r) damagePlayer(14);
+    }
+  }
+  strikes = strikes.filter(st => !st.done);
   for (const w of wrecks) w.t -= dt;
   wrecks = wrecks.filter(w => w.t > 0);
   for (const x of explos) x.t += dt;
@@ -1181,11 +1259,17 @@ function render() {
   }
   for (const w of wrecks) if (vis(w.x, w.y, 40)) {
     drawShadow(w.x, w.y + 26, 66);
-    drawSprite(SPR.wreck, 0, false, w.x, w.y, ANCH.car, w.fl);
+    drawSprite(SPR[w.s || 'wreck'], 0, false, w.x, w.y, ANCH[w.s || 'wreck'], w.fl);
     if (Math.random() < 0.3) parts.push({ x: w.x + rand(-40, 40), y: w.y - 20, vx: rand(-10, 10), vy: -40, t: 0.6, t0: 0.6, col: '#555', s: 2 });
   }
+  for (const st of strikes) {
+    const cx = tb(st.x), cy = tbY(st.y), r = Math.round(58 / WU), on = Math.floor(st.t * (st.t < 0.5 ? 16 : 8)) & 1;
+    bx.strokeStyle = on ? '#ff3b30' : '#ffd23a'; bx.lineWidth = 1;
+    bx.beginPath(); bx.ellipse(cx + 0.5, cy + 0.5, r, Math.round(r * 0.7), 0, 0, 6.283); bx.stroke();
+    bx.fillStyle = bx.strokeStyle; bx.fillRect(cx - 4, cy, 9, 1); bx.fillRect(cx, cy - 3, 1, 7);
+  }
   const actors = [];
-  for (const e of enemies) if (vis(e.x, e.y, 40)) actors.push(e);
+  for (const e of enemies) if (vis(e.x, e.y, 40) && !e.heli) actors.push(e);
   actors.push(P);
   actors.sort((a, b) => a.y - b.y);
   for (const a of actors) {
@@ -1202,6 +1286,12 @@ function render() {
     if (a.type === 'mini' && a.mode === 'tele') { bx.fillStyle = Math.floor(T * 12) % 2 ? '#ff3b30' : '#ffd23a'; bx.fillRect(tb(a.x) - 1, tbY(a.y) - Math.round(img.height * 0.62) - 6, 3, 4); }
     const fr = a.mv ? (Math.floor(a.wob / 2) & 1) : 0;
     drawSprite(set, fr, a.flash > 0, a.x, a.y, ANCH[a.type], P.x < a.x);
+  }
+  for (const e of enemies) if (e.heli && vis(e.x, e.y, 80)) drawHeli(e);
+  for (const st of strikes) if (st.t < 0.45) {
+    const k = 1 - st.t / 0.45, x = tb(st.sx + (st.x - st.sx) * k), y = tbY(st.sy + (st.y - st.sy) * k);
+    bx.fillStyle = '#1b1410'; bx.fillRect(x - 2, y - 2, 4, 4); bx.fillStyle = '#9aa08a'; bx.fillRect(x - 1, y - 1, 2, 2);
+    bx.fillStyle = Math.random() < 0.5 ? '#ffb02a' : '#fff0a0'; bx.fillRect(x - 1 - Math.sign(st.x - st.sx) * 3, y - 1 - Math.sign(st.y - st.sy) * 3, 2, 2);
   }
   if (W.machete) {
     const s = WEAPONS.machete.s(W.machete), img = ITEM.machete;
@@ -1316,6 +1406,23 @@ function bubble(text, x, tipY, t, enemy) {
   lines.forEach((l, i) => ctx.fillText(l, bx0 + w / 2, by0 + 18 + i * lh));
   ctx.restore();
 }
+function drawHeli(e) {
+  const alt = e.crash > 0 ? 70 * (e.crash / 1.5) : 70;
+  drawShadow(e.x, e.y + alt, 56);
+  const img = SPR.heli[0][e.flash > 0 ? 'w' : 'n'], w = img.width, h = img.height;
+  bx.save(); bx.translate(tb(e.x), tbY(e.y));
+  if (e.crash > 0) bx.rotate(e.spin);
+  if (e.fl) bx.scale(-1, 1);
+  bx.drawImage(img, -(w >> 1), -(h >> 1));
+  const ra = T * 28, rx = 10, R = 27;
+  bx.fillStyle = 'rgba(0,0,0,.10)'; bx.beginPath(); bx.arc(rx, 0, R, 0, 6.283); bx.fill();
+  bx.strokeStyle = 'rgba(20,20,20,.75)'; bx.lineWidth = 2; bx.beginPath();
+  for (let k = 0; k < 2; k++) { const a = ra + k * Math.PI / 2; bx.moveTo(rx - Math.cos(a) * R, -Math.sin(a) * R); bx.lineTo(rx + Math.cos(a) * R, Math.sin(a) * R); }
+  bx.stroke();
+  bx.fillStyle = '#1b1410'; bx.fillRect(rx - 1, -1, 3, 3);
+  const ta = T * 40; bx.lineWidth = 1; bx.beginPath(); bx.moveTo(-36 - Math.cos(ta) * 6, -Math.sin(ta) * 6); bx.lineTo(-36 + Math.cos(ta) * 6, Math.sin(ta) * 6); bx.stroke();
+  bx.restore();
+}
 function drawHero() {
   const img = SPR.hero[0].n;
   drawShadow(P.x, P.y + img.height * WU * 0.36, 14);
@@ -1340,7 +1447,7 @@ function loop(now) {
 requestAnimationFrame(loop);
 
 if (location.hash === '#debug') window.OMA = { get P() { return P; }, get W() { return W; }, get enemies() { return enemies; }, get MUS() { return MUS; },
-  setT: t => { T = t; nextMini = Math.max(nextMini, t); }, xp: v => addXp(v), give: (k, l) => { W[k] = l; }, say: () => { quote = { text: "Je reviendrai pour toi, Bennett !", t: 2.6 }; const m = enemies.find(e => e.type === 'mini'); if (m) equote = { text: MINI_QUOTES[0], t: 3, ent: m }; } };
+  setT: t => { T = t; nextMini = Math.max(nextMini, t); }, xp: v => addXp(v), give: (k, l) => { W[k] = l; }, hitBoss: n => { const e = enemies.find(e => e.type === 'boss'); if (e) { e.crash = 0; hurt(e, n / P.dmg); } }, say: () => { quote = { text: "Je reviendrai pour toi, Bennett !", t: 2.6 }; const m = enemies.find(e => e.type === 'mini'); if (m) equote = { text: MINI_QUOTES[0], t: 3, ent: m }; } };
 })();
 </script>
 </body>
