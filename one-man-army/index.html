@@ -139,7 +139,7 @@ function initAudio() {
     const d = noiseBuf.getChannelData(0);
     for (let i = 0; i < len; i++) d[i] = Math.random() * 2 - 1;
     sfxGain = AC.createGain(); sfxGain.gain.value = 1; sfxGain.connect(AC.destination);
-    musGain = AC.createGain(); musGain.gain.value = 0.32; musGain.connect(AC.destination);
+    musGain = AC.createGain(); musGain.gain.value = 0.5; musGain.connect(AC.destination);
     pulse25 = mkPulse(0.25); pulse12 = mkPulse(0.125);
   } catch (e) { AC = null; }
 }
@@ -185,7 +185,7 @@ function sfx(n) {
   }
 }
 
-/* ---------- Musique : thème original en La mineur, 8 mesures en boucle ---------- */
+/* ---------- Musique 16 bits : thème d'action original en Mi mineur, 16 mesures ---------- */
 function nf(n) {
   const m = /^([A-G])(#?)(\d)$/.exec(n);
   const s = { C: 0, D: 2, E: 4, F: 5, G: 7, A: 9, B: 11 }[m[1]] + (m[2] ? 1 : 0) + 12 * (+m[3] + 1);
@@ -193,40 +193,136 @@ function nf(n) {
 }
 const SONG = (() => {
   const melody = [
-    // A — Am | F | G | Em
-    ['A4',3],['E5',3],['A5',2],['G5',2],['E5',2],['D5',2],['E5',2],
-    ['F5',3],['E5',3],['C5',2],['A4',4],['C5',2],['D5',2],
-    ['D5',3],['B4',3],['G4',2],['B4',2],['D5',2],['G5',2],['A5',2],
-    ['B5',4],['G5',2],['E5',2],['B4',4],[null,4],
-    // B — F | G | Am | E
-    ['A5',2],['A5',1],[null,1],['A5',2],['G5',2],['F5',2],['G5',2],['A5',4],
-    ['B5',2],['B5',1],[null,1],['B5',2],['A5',2],['G5',2],['A5',2],['B5',4],
-    ['C6',4],['B5',2],['A5',2],['E5',4],['A5',4],
-    ['G#5',4],['E5',2],['B4',2],['G#4',4],['B4',2],['E5',2]
+    // A — Em | C | D | Em | Em | C | D | B
+    ['E5',4],['B4',2],['E5',2],['G5',4],['F#5',2],['E5',2],
+    ['G5',3],['A5',3],['G5',2],['E5',4],['C5',4],
+    ['D5',3],['F#5',3],['A5',2],['D6',4],['C6',2],['A5',2],
+    ['B5',8],['G5',4],['E5',4],
+    ['E5',2],['E5',1],[null,1],['E5',2],['G5',2],['B5',4],['A5',2],['G5',2],
+    ['A5',4],['G5',2],['E5',2],['G5',4],['A5',4],
+    ['B5',4],['A5',2],['F#5',2],['D5',4],['A5',4],
+    ['B4',4],['D#5',4],['F#5',4],['A5',4],
+    // B — Am | C | D | Em | Am | C | B | B
+    ['C6',6],['B5',2],['A5',4],['E5',4],
+    ['G5',6],['A5',2],['G5',4],['E5',4],
+    ['F#5',4],['G5',2],['A5',2],['D6',4],['A5',4],
+    ['B5',12],[null,4],
+    ['E6',4],['D6',2],['C6',2],['B5',4],['A5',4],
+    ['G5',4],['A5',2],['B5',2],['C6',4],['E6',4],
+    ['D#6',8],['B5',4],['F#5',4],
+    ['B5',2],[null,2],['B5',2],[null,2],['B5',2],['A5',2],['F#5',2],['D#5',2]
   ];
-  const lead = new Array(128).fill(null);
+  const lead = new Array(256).fill(null);
   let s = 0; for (const [n, l] of melody) { if (n) lead[s] = { f: nf(n), l }; s += l; }
-  const roots = ['A2', 'F2', 'G2', 'E2', 'F2', 'G2', 'A2', 'E2'].map(nf);
-  const chords = [['A4','C5','E5'],['F4','A4','C5'],['G4','B4','D5'],['E4','G4','B4'],['F4','A4','C5'],['G4','B4','D5'],['A4','C5','E5'],['E4','G#4','B4']].map(c => c.map(nf));
-  return { lead, roots, chords };
+  const roots = ['E2','C2','D2','E2','E2','C2','D2','B1','A1','C2','D2','E2','A1','C2','B1','B1'].map(nf);
+  const C = { Em: ['E4','G4','B4'], C: ['C4','E4','G4'], D: ['D4','F#4','A4'], B: ['B3','D#4','F#4'], Am: ['A3','C4','E4'] };
+  const chords = ['Em','C','D','Em','Em','C','D','B','Am','C','D','Em','Am','C','B','B'].map(k => C[k].map(nf));
+  return { lead, roots, chords, len: s };
 })();
-const MUS = { on: store.get('oma_music', true), step: 0, next: 0, bpm: 132, tr: 1 };
+const MUS = { on: store.get('oma_music', true), step: 0, next: 0, bpm: 150, tr: 1, boss: false };
+let musBus = null, leadBus = null, gtrBus = null;
+function initMusicChain() {
+  if (musBus) return;
+  const comp = AC.createDynamicsCompressor();
+  comp.threshold.value = -16; comp.ratio.value = 4; comp.attack.value = 0.004; comp.release.value = 0.15;
+  musBus = AC.createGain(); musBus.gain.value = 1; musBus.connect(comp).connect(musGain);
+  // écho sur la mélodie (3 doubles-croches)
+  leadBus = AC.createGain(); leadBus.connect(musBus);
+  const dl = AC.createDelay(1), fb = AC.createGain(), wet = AC.createGain(), dlf = AC.createBiquadFilter();
+  dl.delayTime.value = 60 / 150 / 4 * 3; fb.gain.value = 0.32; wet.gain.value = 0.28; dlf.type = 'lowpass'; dlf.frequency.value = 2800;
+  leadBus.connect(dl); dl.connect(dlf).connect(fb).connect(dl); dlf.connect(wet).connect(musBus);
+  // guitare saturée
+  gtrBus = AC.createGain();
+  const ws = AC.createWaveShaper(), curve = new Float32Array(1024);
+  for (let i = 0; i < 1024; i++) { const x = i / 511.5 - 1; curve[i] = Math.tanh(x * 6) * 0.9; }
+  ws.curve = curve; ws.oversample = '2x';
+  const pre = AC.createBiquadFilter(); pre.type = 'highpass'; pre.frequency.value = 90;
+  const cab = AC.createBiquadFilter(); cab.type = 'lowpass'; cab.frequency.value = 2600; cab.Q.value = 0.8;
+  const mid = AC.createBiquadFilter(); mid.type = 'peaking'; mid.frequency.value = 900; mid.gain.value = 4;
+  const out = AC.createGain(); out.gain.value = 0.16;
+  gtrBus.connect(pre).connect(ws).connect(cab).connect(mid).connect(out).connect(musBus);
+}
+function env(g, t, vol, a, dur, rel) {
+  g.gain.setValueAtTime(0.0001, t); g.gain.linearRampToValueAtTime(vol, t + a);
+  g.gain.setValueAtTime(vol, t + Math.max(a, dur - rel)); g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+}
+function mLead(f, t, dur) {
+  const g = AC.createGain(), flt = AC.createBiquadFilter();
+  flt.type = 'lowpass'; flt.Q.value = 2;
+  flt.frequency.setValueAtTime(5200, t); flt.frequency.exponentialRampToValueAtTime(1800, t + Math.min(0.4, dur));
+  env(g, t, 0.075, 0.01, dur, Math.min(0.08, dur * 0.4));
+  const lfo = AC.createOscillator(), lg = AC.createGain();
+  lfo.frequency.value = 5.8; lg.gain.setValueAtTime(0, t); lg.gain.linearRampToValueAtTime(dur > 0.3 ? 18 : 0, t + Math.min(0.35, dur));
+  lfo.connect(lg);
+  for (const det of [-7, 7]) {
+    const o = AC.createOscillator(); o.type = 'sawtooth'; o.frequency.setValueAtTime(f, t); o.detune.value = det;
+    lg.connect(o.detune); o.connect(flt); o.start(t); o.stop(t + dur + 0.02);
+  }
+  const sq = AC.createOscillator(); sq.type = 'square'; sq.frequency.setValueAtTime(f / 2, t);
+  const sg = AC.createGain(); sg.gain.value = 0.35; sq.connect(sg).connect(flt); sq.start(t); sq.stop(t + dur + 0.02);
+  lfo.start(t); lfo.stop(t + dur + 0.02);
+  flt.connect(g).connect(leadBus);
+}
+function mBass(f, t, dur, acc) {
+  // basse FM façon Mega Drive
+  const car = AC.createOscillator(), mod = AC.createOscillator(), mg = AC.createGain(), g = AC.createGain();
+  car.type = 'sine'; mod.type = 'sine';
+  car.frequency.setValueAtTime(f, t); mod.frequency.setValueAtTime(f * 2, t);
+  mg.gain.setValueAtTime(f * (acc ? 5 : 3.2), t); mg.gain.exponentialRampToValueAtTime(f * 0.4, t + 0.09);
+  mod.connect(mg).connect(car.frequency);
+  env(g, t, acc ? 0.34 : 0.26, 0.004, dur, 0.04);
+  car.connect(g).connect(musBus);
+  car.start(t); mod.start(t); car.stop(t + dur + 0.02); mod.stop(t + dur + 0.02);
+}
+function mGtr(root, t, dur, vol) {
+  const g = AC.createGain(); env(g, t, vol, 0.003, dur, Math.min(0.05, dur * 0.4));
+  for (const [m, d] of [[2, -4], [3, 5], [4, 0]]) {   // octave, quinte, octave haute → power chord
+    const o = AC.createOscillator(); o.type = 'sawtooth'; o.frequency.setValueAtTime(root * m, t); o.detune.value = d;
+    o.connect(g); o.start(t); o.stop(t + dur + 0.02);
+  }
+  g.connect(gtrBus);
+}
+function mPad(ch, t, dur) {
+  const g = AC.createGain(), flt = AC.createBiquadFilter(); flt.type = 'lowpass'; flt.frequency.value = 1500;
+  env(g, t, 0.022, 0.25, dur, 0.3);
+  for (const f of ch) for (const det of [-9, 9]) { const o = AC.createOscillator(); o.type = 'sawtooth'; o.frequency.value = f; o.detune.value = det; o.connect(flt); o.start(t); o.stop(t + dur + 0.02); }
+  flt.connect(g).connect(musBus);
+}
+function mKick(t) { osc(170, 0.16, 'sine', 0.8, t, musBus, 42); nz(0.02, 0.25, 3000, t, musBus); }
+function mSnare(t, v) { nz(0.18, 0.32 * (v || 1), 3800, t, musBus); osc(200, 0.08, 'triangle', 0.22 * (v || 1), t, musBus, 140); }
+function mHat(t, open) { nz(open ? 0.14 : 0.035, open ? 0.06 : 0.05, 8000, t, musBus, true); }
+function mCrash(t) { nz(1.1, 0.12, 5500, t, musBus, true); }
+function mTom(t, f) { osc(f, 0.2, 'sine', 0.45, t, musBus, f * 0.55); }
 function musicWanted() { return AC && MUS.on && !muted && (state === 'play' || state === 'levelup'); }
 function playStep(s, t, sd) {
-  const bar = s >> 4, pos = s & 15, tr = MUS.tr, boss = MUS.bpm > 140;
+  const bar = s >> 4, pos = s & 15, tr = MUS.tr, boss = MUS.boss, B = bar >= 8;
+  const root = SONG.roots[bar] * tr;
+  // mélodie
   const L = SONG.lead[s];
-  if (L) osc(L.f * tr, L.l * sd * 0.92, 'p25', 0.11, t, musGain);
-  if (pos % 2 === 0) { const r = SONG.roots[bar] * tr * (pos % 4 === 2 ? 2 : 1); osc(r, sd * 1.7, 'triangle', 0.22, t, musGain); }
-  if (bar >= 4 || boss) { const c = SONG.chords[bar]; osc(c[pos % 3] * tr * 2, sd * 0.9, 'p12', 0.03, t, musGain); }
-  if (pos === 0 || pos === 8 || (bar >= 4 && pos === 10) || (boss && pos === 6)) osc(150, 0.13, 'sine', 0.55, t, musGain, 40);
-  if (pos === 4 || pos === 12 || (bar === 7 && pos >= 13)) { nz(0.12, 0.22, 2500, t, musGain); osc(190, 0.06, 'triangle', 0.12, t, musGain, 120); }
-  if (pos % 2 === 0 || boss) nz(0.03, pos % 4 === 2 ? 0.07 : 0.04, 7000, t, musGain, true);
+  if (L) mLead(L.f * tr, t, L.l * sd * 0.95);
+  // basse qui galope en doubles-croches
+  const oct = [0,0,1,0, 0,0,1,0, 0,0,1,0, 0,1,0,1][pos];
+  mBass(root * (oct ? 2 : 1), t, sd * 0.85, pos % 4 === 0);
+  // guitare
+  if (!B) { if (pos % 2 === 0 && pos !== 14) mGtr(root, t, pos === 0 ? sd * 3.5 : sd * 0.7, pos === 0 ? 0.5 : 0.35); }
+  else if (pos === 0 || pos === 8) mGtr(root, t, sd * 7.6, 0.42);
+  else if (pos === 14) mGtr(root, t, sd * 0.7, 0.3);
+  // nappe dans le refrain
+  if (B && pos === 0) mPad(SONG.chords[bar].map(f => f * tr), t, sd * 16);
+  // batterie
+  const fill = bar === 15 && pos >= 8;
+  if (fill) { if (pos % 2 === 0) mTom(t, [220, 180, 150, 120][(pos - 8) >> 1]); if (pos >= 12) mSnare(t, 0.7); return; }
+  if (pos === 0 || pos === 8 || pos === 6 || (B && pos === 10) || (boss && pos % 4 === 2)) mKick(t);
+  if (pos === 4 || pos === 12) mSnare(t);
+  if ((B || boss) ? true : pos % 2 === 0) mHat(t, pos === 14);
+  if (pos === 0 && (bar === 0 || bar === 8)) mCrash(t);
 }
 setInterval(() => {
   if (!musicWanted()) { MUS.next = 0; return; }
+  initMusicChain();
   const sd = 60 / MUS.bpm / 4;
   if (MUS.next < AC.currentTime) MUS.next = AC.currentTime + 0.05;
-  while (MUS.next < AC.currentTime + 0.15) { playStep(MUS.step, MUS.next, sd); MUS.next += sd; MUS.step = (MUS.step + 1) % 128; }
+  while (MUS.next < AC.currentTime + 0.15) { playStep(MUS.step, MUS.next, sd); MUS.next += sd; MUS.step = (MUS.step + 1) % 256; }
 }, 25);
 
 /* =====================================================================
@@ -560,7 +656,7 @@ function newGame() {
   T = 0; kills = 0; shake = 0; pending = 0; endTimer = -1; won = false; chestPending = false;
   spawnAcc = 0; nextMini = 180; bossSpawned = false; boss = null; waveT = 60; quote = null; equote = null; quoteT = rand(10, 18);
   banner = { text: 'SURVIS !', t: 2.2 };
-  MUS.bpm = 132; MUS.tr = 1; MUS.step = 0;
+  MUS.bpm = 150; MUS.tr = 1; MUS.boss = false; MUS.step = 0;
 }
 newGame();
 
@@ -631,7 +727,7 @@ function spawnTick(dt) {
   if (T >= BOSS_TIME && !bossSpawned) {
     bossSpawned = true; boss = spawnEnemy('boss');
     banner = { text: 'LE GÉNÉRAL ARRIVE', t: 3 }; quote = { text: 'Toi et moi. Maintenant.', t: 2.5 }; sfx('boss'); shake = 14;
-    MUS.bpm = 152; MUS.tr = Math.pow(2, 5 / 12); MUS.step = 0;
+    MUS.bpm = 168; MUS.tr = Math.pow(2, 2 / 12); MUS.boss = true; MUS.step = 128;
   }
   if (T >= nextMini && T < BOSS_TIME - 20) { nextMini += 150; spawnEnemy('mini'); banner = { text: 'MASTODONTE !', t: 2 }; sfx('boss'); }
   const rate = bossSpawned ? 1.2 : 0.7 + T / 40;
