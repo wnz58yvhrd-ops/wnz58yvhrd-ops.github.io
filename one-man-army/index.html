@@ -980,7 +980,7 @@ function finish(win) {
   const better = !b || (win && !b.win) || (win === !!b.win && (win ? kills > b.kills : T > b.t));
   if (better) store.set('oma_best', { t: T, kills, win, lvl: P.lvl });
   $('ovTitle').textContent = win ? 'MISSION ACCOMPLIE' : 'MISSION ÉCHOUÉE';
-  $('ovQuote').textContent = win ? "« Prochaine fois, envoyez quelqu'un de costaud. »" : pick(['« Je reviendrai… plus énervé. »', '« Simple contretemps. »', '« Ils ont eu de la chance. »', '« Je reviendrai pour toi, Bennett ! »']);
+  $('ovQuote').textContent = win ? "« Prochaine fois, envoyez quelqu'un de costaud. »" : '« Je reviendrai pour toi, Bennett ! »';
   $('ovStats').innerHTML = `<div><b>${fmt(T)}</b>survie</div><div><b>${kills}</b>abattus</div><div><b>${P.lvl}</b>niveau</div>`;
   $('bestOver').textContent = (better ? '⭐ Nouveau record ! ' : '') + bestText();
   show('sOver'); showHud(false);
