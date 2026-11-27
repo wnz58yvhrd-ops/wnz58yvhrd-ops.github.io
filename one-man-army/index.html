@@ -63,7 +63,7 @@ h2{font-family:var(--px);font-weight:400;font-size:clamp(20px,5vw,38px);margin:0
 <div class="screen on" id="sTitle">
   <h1>ONE MAN<br>ARMY</h1>
   <div class="tag">Un camp. Une armée.<br>Un seul homme.</div>
-  <p class="story">Tu es <b>Rex Hammer</b>, ex-commando d'élite. Ils ont fait l'erreur de venir te chercher.
+  <p class="story">Tu es <b>John Commando</b>, ex-commando d'élite. Ils ont fait l'erreur de venir te chercher.
   Infiltre leur camp, tiens <b>8 minutes</b> face à leurs troupes, ramasse l'XP pour t'améliorer… et abats <b>le Général</b>.</p>
   <button class="btn" id="bStart">MISSION GO</button>
   <p class="ctrl">Déplacement : <b>ZQSD</b> / <b>WASD</b> / <b>flèches</b> — ou glisse le doigt sur l'écran.<br>Tes armes tirent toutes seules. <b>P</b> ou <b>Échap</b> : pause.</p>
@@ -178,6 +178,7 @@ function sfx(n) {
     case 'level': [523, 659, 784, 1046, 1318].forEach((f, i) => osc(f, 0.14, 'p25', 0.06, AC.currentTime + i * 0.07)); break;
     case 'hurt': osc(160, 0.25, 'square', 0.1, 0, 0, 50); break;
     case 'heal': osc(520, 0.2, 'p25', 0.07, 0, 0, 1300); break;
+    case 'car': osc(70, 0.7, 'sawtooth', 0.12, 0, 0, 190); osc(140, 0.5, 'square', 0.04, 0, 0, 300); break;
     case 'boss': osc(65, 1.4, 'sawtooth', 0.14, 0, 0, 38); nz(1.2, 0.14, 500); break;
     case 'win': [392, 523, 659, 784, 659, 1046].forEach((f, i) => osc(f, i === 5 ? 0.6 : 0.16, 'p25', 0.07, AC.currentTime + i * 0.13)); break;
     case 'lose': [440, 415, 392, 330].forEach((f, i) => osc(f, i === 3 ? 0.7 : 0.25, 'p25', 0.07, AC.currentTime + i * 0.24)); break;
@@ -327,7 +328,7 @@ const EPAL = {
   runner: { ...SKIN, H: '#c8302a', h: '#871a14', u: '#7b6a48', U: '#5a4c33', a: '#5a4a2a' },
   gunner: { ...SKIN, H: '#3e4d5e', h: '#2a3542', u: '#6c7c8e', U: '#4e5b6a', a: '#5a4a2a' },
   brute:  { ...SKIN, H: '#4b4f37', h: '#33362a', u: '#6f7550', U: '#53583b', a: '#c9a227' },
-  mini:   { ...SKIN, H: '#d99a66', h: '#a86c42', u: '#3a3a3a', U: '#262626', a: '#c9a227' },
+  mini:   { ...SKIN, s: '#6b4128', S: '#4a2a18', H: '#16110c', h: '#2a1e14', u: '#3b4252', U: '#272c38', a: '#ece6d6' },
   boss:   { ...SKIN, H: '#b0201a', h: '#7a1410', u: '#4a5a3a', U: '#34402a', a: '#f2c230' }
 };
 function build(top, legs, pal, sc) {
@@ -342,7 +343,27 @@ const SPR = {
   mini: build(BIG_TOP, BIG_LEGS, EPAL.mini, 2),
   boss: build(BIG_TOP, BIG_LEGS, EPAL.boss, 2)
 };
-const ANCH = { hero: 8, grunt: 7, runner: 7, gunner: 7, brute: 12, mini: 24, boss: 24 };
+const CAR = [
+  "...........kkkkkkkkkkkk...............",
+  "..........kbbkwwwwkwwwwk..............",
+  ".........kbbkwwWwwkwhhWwk.............",
+  "........kbbbkwwwwwkwhhwwwk............",
+  "..kkkkkkbbbbbbbbbbbbbbbbbbkkkkkkkk....",
+  ".kRbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbk..",
+  ".kRBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBByk.",
+  ".kbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbk.",
+  ".kccccccccccccccccccccccccccccccccccck",
+  "..kBBBkkkkkBBBBBBBBBBBBBBBkkkkkBBBBk..",
+  "....kkGGGGkk.............kkGGGGkk....",
+  "....kGGggGGk.............kGGggGGk....",
+  ".....kGGGGk...............kGGGGk.....",
+  "......kkkk.................kkkk......"];
+const CAR2 = CAR.slice(); CAR2[11] = "....kGgGGgGk.............kGgGGgGk....";
+const CAR_PAL = { k: '#120e0a', b: '#2f62c0', B: '#1d3f86', w: '#9cc0c4', W: '#e0f0f2', h: '#1b1410', c: '#d8d8d8', R: '#e0362b', y: '#ffe58a', G: '#1a1a1a', g: '#9a9a9a' };
+const WRECK_PAL = { k: '#0e0c0a', b: '#3a3632', B: '#24211e', w: '#1e1c1a', W: '#2e2a26', h: '#1e1c1a', c: '#555', R: '#3a1a14', y: '#3a3424', G: '#151515', g: '#333' };
+SPR.car = [CAR, CAR2].map(r => { const n = mkSprite(r, CAR_PAL, 2); return { n, w: whiten(n) }; });
+SPR.wreck = [{ n: mkSprite(CAR, WRECK_PAL, 2) }];
+const ANCH = { car: 38, hero: 8, grunt: 7, runner: 7, gunner: 7, brute: 12, mini: 24, boss: 24 };
 const ITEM = {
   machete: mkSprite([".kk..", "kWWk.", "kWWWk", "kWWWk", ".kWWk", ".kWWk", "..kWk", "..kWk", ".kkkk", ".knk.", ".knk.", ".kkk."], { k: '#1b1410', W: '#e3e9ec', n: '#6b4422' }),
   med: mkSprite(["kkkkkkkkk", "kwwwwwwwk", "kwwwrwwwk", "kwwrrrwwk", "kwwwrwwwk", "kwwwwwwwk", "kgggggggk", "kkkkkkkkk"], { k: '#1b1410', w: '#f4f4f4', r: '#d42a2a', g: '#b8b8b8' }),
@@ -526,6 +547,7 @@ const BOSS_TIME = 480, MAX_EN = 300;
    ÉTAT
    ===================================================================== */
 let state = 'title', T = 0, kills = 0, shake = 0, pending = 0, endTimer = -1, won = false, chestPending = false;
+let wrecks = [];
 let P, W, PL, WT, enemies, bullets, ebullets, gems, pickups, explos, parts, texts, grenades, mines;
 let spawnAcc, nextMini, bossSpawned, boss, waveT, quote, banner;
 
@@ -533,7 +555,7 @@ function newGame() {
   P = { x: 0, y: 0, r: 13, hp: 120, maxHp: 120, speed: 165, magnet: 70, regen: 0, dmg: 1, rate: 1, armor: 0,
         xp: 0, lvl: 1, next: 5, inv: 0, fx: 1, fy: 0, ax: 1, ay: 0, walk: 0, moving: false, muzzle: 0, mA: 0 };
   W = { rifle: 1 }; PL = {}; WT = { rifle: 0.3, grenade: 1, rocket: 1.5, mines: 1 };
-  enemies = []; bullets = []; ebullets = []; gems = []; pickups = []; explos = []; parts = []; texts = []; grenades = []; mines = [];
+  wrecks = []; enemies = []; bullets = []; ebullets = []; gems = []; pickups = []; explos = []; parts = []; texts = []; grenades = []; mines = [];
   T = 0; kills = 0; shake = 0; pending = 0; endTimer = -1; won = false; chestPending = false;
   spawnAcc = 0; nextMini = 180; bossSpawned = false; boss = null; waveT = 60; quote = null;
   banner = { text: 'SURVIS !', t: 2.2 };
@@ -594,6 +616,7 @@ function spawnEnemy(type, x, y) {
   if (type === 'mini') hp *= 1 + T / 220; else if (type !== 'boss') hp *= 1 + T / 170;
   const e = { type, x, y, r: d.r, hp, maxHp: hp, sp: d.sp * rand(0.92, 1.08), dmg: d.dmg, xp: d.xp, col: d.col,
               kx: 0, ky: 0, flash: 0, mHit: 0, st: rand(1.5, 3), mode: 'walk', mt: 3, dx: 0, dy: 0, sum: 5, boss: type === 'boss' || type === 'mini', wob: Math.random() * 6 };
+  if (type === 'mini') { e.car = true; e.r = 36; e.fl = false; }
   enemies.push(e); return e;
 }
 function pickType() {
@@ -638,6 +661,16 @@ function hurt(e, base, kx, ky) {
   addText(e.x + rand(-6, 6), e.y - e.r - 8, d, crit ? '#ffd23a' : '#fff', crit);
   sfx('hit');
   if (e.hp <= 0) killEnemy(e);
+  else if (e.car && e.hp <= e.maxHp * 0.5) exitCar(e);
+}
+function exitCar(e) {
+  e.car = false; e.r = 30; e.mode = 'walk'; e.mt = 2; e.kx = e.ky = 0;
+  wrecks.push({ x: e.x, y: e.y, fl: e.fl, t: 40 });
+  if (wrecks.length > 4) wrecks.shift();
+  explos.push({ x: e.x, y: e.y, r: 90, t: 0 }); burst(e.x, e.y, '#2f62c0', 16, 220); burst(e.x, e.y, '#ffb347', 16, 260);
+  shake = Math.max(shake, 12); sfx('boom');
+  e.y += 30;
+  banner = { text: 'IL SORT DE LA VOITURE !', t: 2 };
 }
 function killEnemy(e) {
   e.dead = true; kills++;
@@ -803,9 +836,11 @@ function update(dt) {
       if (e.st <= 0 && d < 380) { e.st = rand(2.4, 3.2); ebullets.push({ x: e.x, y: e.y, vx: dx / d * 190, vy: dy / d * 190, r: 4, dmg: e.dmg, life: 3 }); sfx('eshot'); }
     } else if (e.type === 'mini') {
       e.mt -= dt;
-      if (e.mode === 'walk' && e.mt <= 0) { e.mode = 'tele'; e.mt = 0.8; e.dx = dx / d; e.dy = dy / d; }
+      const spd = e.car ? 1.5 : 1, dsh = e.car ? 5.5 : 4;
+      if (e.mode === 'walk') { vx *= spd; vy *= spd; }
+      if (e.mode === 'walk' && e.mt <= 0) { e.mode = 'tele'; e.mt = e.car ? 0.6 : 0.8; e.dx = dx / d; e.dy = dy / d; if (e.car) sfx('car'); }
       else if (e.mode === 'tele') { vx = vy = 0; if (e.mt <= 0) { e.mode = 'dash'; e.mt = 0.6; } }
-      else if (e.mode === 'dash') { vx = e.dx * e.sp * 4; vy = e.dy * e.sp * 4; if (Math.random() < 0.5) burst(e.x, e.y + 20, '#8c7b55', 1, 40); if (e.mt <= 0) { e.mode = 'walk'; e.mt = rand(3.5, 5); } }
+      else if (e.mode === 'dash') { vx = e.dx * e.sp * dsh; vy = e.dy * e.sp * dsh; if (Math.random() < (e.car ? 0.9 : 0.5)) burst(e.x - e.dx * 60, e.y + 26, '#8c7b55', 1, 40); if (e.mt <= 0) { e.mode = 'walk'; e.mt = rand(3.5, 5); } }
     } else if (e.type === 'boss') {
       const enraged = e.hp < e.maxHp / 2;
       if (enraged) { vx *= 1.3; vy *= 1.3; }
@@ -821,6 +856,7 @@ function update(dt) {
     const kd = Math.max(0, 1 - dt * 9);
     e.x += (vx + e.kx) * dt; e.y += (vy + e.ky) * dt; e.kx *= kd; e.ky *= kd;
     e.mv = Math.abs(vx) + Math.abs(vy) > 1;
+    if (Math.abs(vx) > 5) e.fl = vx < 0;
     query(e.x, e.y, e.r + 20, o => {
       if (o === e) return;
       const sx = e.x - o.x, sy = e.y - o.y, min = e.r + o.r, dd = sx * sx + sy * sy;
@@ -861,6 +897,8 @@ function update(dt) {
 
   for (const p of parts) { p.x += p.vx * dt; p.y += p.vy * dt; p.vx *= 0.92; p.vy *= 0.92; p.t -= dt; }
   parts = parts.filter(p => p.t > 0);
+  for (const w of wrecks) w.t -= dt;
+  wrecks = wrecks.filter(w => w.t > 0);
   for (const x of explos) x.t += dt;
   explos = explos.filter(x => x.t < 0.4);
   for (const t of texts) { t.y -= 40 * dt; t.t -= dt; }
@@ -996,12 +1034,24 @@ function render() {
     const s = ITEM[p.k], bob = Math.floor(T * 3 + p.x * 0.1) & 1;
     drawShadow(p.x, p.y + 10, s.width); bx.drawImage(s, tb(p.x) - (s.width >> 1), tbY(p.y) - (s.height >> 1) - bob);
   }
+  for (const w of wrecks) if (vis(w.x, w.y, 40)) {
+    drawShadow(w.x, w.y + 26, 66);
+    drawSprite(SPR.wreck, 0, false, w.x, w.y, ANCH.car, w.fl);
+    if (Math.random() < 0.3) parts.push({ x: w.x + rand(-40, 40), y: w.y - 20, vx: rand(-10, 10), vy: -40, t: 0.6, t0: 0.6, col: '#555', s: 2 });
+  }
   const actors = [];
   for (const e of enemies) if (vis(e.x, e.y, 40)) actors.push(e);
   actors.push(P);
   actors.sort((a, b) => a.y - b.y);
   for (const a of actors) {
     if (a === P) { drawHero(); continue; }
+    if (a.type === 'mini' && a.car) {
+      const img = SPR.car[0].n;
+      drawShadow(a.x, a.y + 26, 66);
+      if (a.mode === 'tele') { bx.fillStyle = Math.floor(T * 12) % 2 ? '#ff3b30' : '#ffd23a'; bx.fillRect(tb(a.x) - 1, tbY(a.y) - Math.round(img.height * 0.62) - 6, 3, 4); }
+      drawSprite(SPR.car, a.mv ? Math.floor(T * 14) & 1 : 0, a.flash > 0, a.x, a.y, ANCH.car, a.fl);
+      continue;
+    }
     const set = SPR[a.type], img = set[0].n;
     drawShadow(a.x, a.y + img.height * WU * 0.36, Math.round(img.width * 0.6));
     if (a.type === 'mini' && a.mode === 'tele') { bx.fillStyle = Math.floor(T * 12) % 2 ? '#ff3b30' : '#ffd23a'; bx.fillRect(tb(a.x) - 1, tbY(a.y) - Math.round(img.height * 0.62) - 6, 3, 4); }
